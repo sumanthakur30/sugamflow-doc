@@ -8,6 +8,7 @@ Documentation, deploy compare notes, and safe operational SQL for SugamFlow (not
 - `docs/` — product and operations documentation copied from the SugamFlow workspace. Credential spreadsheets stay in the original workspace and are gitignored here.
 - `scripts/sequences/` — local start sequences (`00` common platform through `04` CRM).
 - `config/` — Compose files and env examples copied from the workspace root. Live `.env` files stay in the original workspace.
+- `config/school/` — School ERP Compose files and env examples copied from `D:\school`. The live `.env.school.production` stays in the school repo.
 - `postgres/production/polyclinic/` — RDS predeploy checks and SAFE orderdb scripts for polyclinic.
 
 Application source, Flyway migrations, live `.env` files, and service repos stay in their own repositories.
