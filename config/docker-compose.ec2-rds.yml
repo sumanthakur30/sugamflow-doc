@@ -1,0 +1,697 @@
+# Phase 1 network isolation: only gateway-service publishes a host port.
+# All other services use the Compose network.
+
+# EC2 + AWS RDS + Docker Hub (pull-only, no local Postgres).
+#
+# Prerequisites:
+#   - RDS reachable from EC2 SG; databases/users match *_DB_* in .env
+#   - Images exist on your registry: ${IMAGE_PREFIX}/<service>:${IMAGE_TAG}
+#
+# IMAGE_TAG (READ THIS — common "not found" cause):
+#   - Set IMAGE_TAG in the env file you pass to Compose (e.g. .env.production) to a tag
+#     that EXISTS on the registry for EVERY service (see Docker Hub / ECR "Tags").
+#   - Do NOT set IMAGE_TAG=latest unless you actually push :latest for each image.
+#   - If IMAGE_TAG is unset, compose defaults to 1.0.0 (see each image: line below).
+#   - Never copy .env.local onto EC2 for pulls: local files often used "latest".
+#
+# Usage (from directory containing this file):
+#   docker compose -f docker-compose.ec2-rds.yml pull
+#   docker compose -f docker-compose.ec2-rds.yml up -d
+#
+# Or with explicit env file:
+#   docker compose -f docker-compose.ec2-rds.yml --env-file .env.production up -d
+#
+# Required .env keys (examples — use your real RDS host and secrets):
+#   SPRING_PROFILES_ACTIVE=prod
+#   IMAGE_PREFIX=sumanthakur30
+#   IMAGE_TAG=1.0.0
+#   FIELDFORCE_IMAGE_TAG=1.0.0
+#   GST_IMAGE_TAG=1.0.0
+#   # Live GSP (optional — default mock). See docs/GSP-GO-LIVE-RUNBOOK.md
+#   GST_EINVOICE_PROVIDER=http
+#   GST_EWAY_PROVIDER=http
+#   GST_GSP_BASE_URL=https://your-gsp-adapter.example.com
+#   GST_GSP_API_KEY=...
+#   SECURITY_JWT_SECRET=...
+#   SECURITY_INVITE_INTERNAL_KEY=... (same value as SECURITY_ENTITLEMENT_GATE_INTERNAL_API_KEY)
+#   AUTH_DB_URL=jdbc:postgresql://YOUR_RDS_ENDPOINT:5432/authdb?sslmode=require
+#   (and all other *_DB_URL / *_DB_USERNAME / *_DB_PASSWORD)
+#   Polyclinic (doctor dashboard): doctordb, appointmentdb, queuedb — bootstrap on RDS with
+#   infra/postgres/create-polyclinic-databases.sql before first deploy.
+#
+# Optional host port overrides if 8080–8089 / 9090 are already in use on EC2
+# (container ports stay the same; only the left side of the mapping changes):
+#   PRODUCT_SERVICE_HOST_PORT=18081  PAYMENT_SERVICE_HOST_PORT=18086
+#   GATEWAY_SERVICE_HOST_PORT=19090  STOCK_SERVICE_HOST_PORT=18082
+#   FIELDFORCE_SERVICE_HOST_PORT=18090  GST_SERVICE_HOST_PORT=18091
+#   DOCTOR_SERVICE_HOST_PORT=18092  APPOINTMENT_SERVICE_HOST_PORT=18093  QUEUE_SERVICE_HOST_PORT=18098 … etc.
+#
+# Flyway (prod): x-common-env sets SPRING_PROFILES_ACTIVE=prod. Each service runs
+# migrations from classpath:db/migration into the DB in *_DB_URL / SPRING_DATASOURCE_*.
+# Create empty PostgreSQL databases (and users) on RDS before first deploy; each service
+# uses its own flyway_schema_history_* table (see application-prod.properties per module).
+# product-service: deploy V11+ so import_status allows VALIDATED (required for import validate step).
+#
+# notification-service: set SPRING_MAIL_* (+ SPRING_MAIL_FROM) and TWILIO_*/MSG91_* in .env.production.
+# Defaults: mail localhost (broken on EC2); SMS/WhatsApp stub until providers are set.
+#
+# FORBIDDEN in .env.production (breaks gateway routes): SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_ROUTES_*_URI
+#
+# After code changes: rebuild & push gateway-service (GATEWAY_* URIs + polyclinic routes),
+# doctor-service, appointment-service, queue-management-service, and any touched microservices.
+#
+# MEMORY (m7i-flex.large = 8 GiB): this stack runs ~18 JVM containers. Without mem_limit /
+# conservative -Xmx, the host can OOM (EC2 "2/3 status checks", SSH/login dead until reboot).
+# Prefer m7i-flex.xlarge (16 GiB) OR set JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m and
+# JVM_SERVICE_MEM_LIMIT=384m in .env.production. Run: bash scripts/ec2-host-health-audit.sh
+
+name: sumanthakur30
+
+x-logging: &docker-logging
+  driver: json-file
+  options:
+    max-size: "25m"
+    max-file: "3"
+
+# Applied to every Spring Boot microservice (not redis/config).
+x-jvm-service: &jvm-service
+  restart: unless-stopped
+  logging: *docker-logging
+  mem_limit: ${JVM_SERVICE_MEM_LIMIT:-400m}
+  oom_score_adj: 300
+
+x-common-env: &common-env
+  SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+  TZ: Asia/Kolkata
+  # EC2: cap heap per service (gateway overrides with GATEWAY_JAVA_TOOL_OPTIONS).
+  # 256m × ~17 services + 384m gateway ≈ 4.7 GiB heap — fits 8 GiB with OS/Docker/nginx.
+  JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Asia/Kolkata -Xms128m -Xmx256m -XX:+ExitOnOutOfMemoryError}
+  SPRING_CLOUD_CONFIG_URI: http://config-service:8888
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka
+  EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+  EUREKA_INSTANCE_LEASE_RENEWAL_INTERVAL_IN_SECONDS: "10"
+  EUREKA_INSTANCE_LEASE_EXPIRATION_DURATION_IN_SECONDS: "30"
+  SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${DB_POOL_MAX_SIZE:-3}
+  SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${DB_POOL_MIN_IDLE:-1}
+  SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: ${DB_POOL_IDLE_TIMEOUT_MS:-120000}
+  SPRING_DATASOURCE_HIKARI_MAX_LIFETIME: ${DB_POOL_MAX_LIFETIME_MS:-600000}
+  SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: ${DB_POOL_CONNECTION_TIMEOUT_MS:-30000}
+  SECURITY_JWT_ENFORCE: "${SECURITY_JWT_ENFORCE:-true}"
+  SECURITY_JWT_SECRET: "${SECURITY_JWT_SECRET}"
+  SECURITY_INVITE_INTERNAL_KEY: "${SECURITY_INVITE_INTERNAL_KEY}"
+  SECURITY_INTERNAL_API_KEY: "${SECURITY_INTERNAL_API_KEY:-${SECURITY_INVITE_INTERNAL_KEY}}"
+  # order/stock/product RemoteEntitlementGateClient → shop-service /api/v1/internal/features/...
+  SECURITY_ENTITLEMENT_GATE_INTERNAL_API_KEY: "${SECURITY_ENTITLEMENT_GATE_INTERNAL_API_KEY:-${SECURITY_INVITE_INTERNAL_KEY}}"
+  # Required by security-common ProductionSecretsValidator in prod (auth, shop, order, …).
+  SHOP_ADMIN_API_KEY: "${SHOP_ADMIN_API_KEY}"
+  # Fail-open to host loopback. Do not run Tempo/Loki/Grafana on this EC2 box.
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://127.0.0.1:4318}
+  OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:-http/protobuf}
+  OTEL_EXPORTER_OTLP_AUTHORIZATION: ${OTEL_EXPORTER_OTLP_AUTHORIZATION:-}
+  OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_traceidratio}
+  OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-0.15}
+  SUGAM_ENVIRONMENT: ${SUGAM_ENVIRONMENT:-prod}
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    logging: *docker-logging
+    mem_limit: ${REDIS_MEM_LIMIT:-128m}
+    command: ["redis-server", "--maxmemory", "96mb", "--maxmemory-policy", "allkeys-lru"]
+    # Phase 1: internal only (no host port binding)
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  config-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/config-service:${IMAGE_TAG:-1.0.0}
+    mem_limit: ${CONFIG_SERVICE_MEM_LIMIT:-256m}
+    environment:
+      SERVER_PORT: 8888
+      SPRING_PROFILES_ACTIVE: native,docker
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:/tmp
+    # Phase 1: internal only (no host port binding)
+
+  discovery-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/discovery-service:${IMAGE_TAG:-1.0.0}
+    mem_limit: ${DISCOVERY_SERVICE_MEM_LIMIT:-512m}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: discovery-service
+      SERVER_PORT: 8761
+    # Phase 1: internal only (no host port binding)
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8761/actuator/health | grep -q UP || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
+    depends_on:
+      config-service:
+        condition: service_started
+
+  gateway-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/gateway-service:${GATEWAY_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    mem_limit: ${GATEWAY_SERVICE_MEM_LIMIT:-640m}
+    environment:
+      <<: *common-env
+      JAVA_TOOL_OPTIONS: ${GATEWAY_JAVA_TOOL_OPTIONS:--Duser.timezone=Asia/Kolkata -Xms128m -Xmx384m -XX:+ExitOnOutOfMemoryError}
+      SERVER_PORT: 9090
+      SECURITY_JWT_SECRET: "${SECURITY_JWT_SECRET}"
+      # Direct Compose DNS (bypass Eureka when registry is empty). Do NOT use SPRING_CLOUD_GATEWAY_ROUTES_* env overrides.
+      GATEWAY_AUTH_URI: ${GATEWAY_AUTH_URI:-http://auth-service:8085}
+      GATEWAY_ORDER_URI: ${GATEWAY_ORDER_URI:-http://order-service:8083}
+      GATEWAY_STOCK_URI: ${GATEWAY_STOCK_URI:-http://stock-service:8082}
+      GATEWAY_PRODUCT_URI: ${GATEWAY_PRODUCT_URI:-http://product-service:8081}
+      GATEWAY_USER_URI: ${GATEWAY_USER_URI:-http://user-service:8084}
+      GATEWAY_SHOP_URI: ${GATEWAY_SHOP_URI:-http://shop-service:8080}
+      GATEWAY_ACCOUNT_URI: ${GATEWAY_ACCOUNT_URI:-http://account-service:8089}
+      GATEWAY_PAYMENT_URI: ${GATEWAY_PAYMENT_URI:-http://payment-service:8086}
+      GATEWAY_NOTIFICATION_URI: ${GATEWAY_NOTIFICATION_URI:-http://notification-service:8087}
+      GATEWAY_REPORTING_URI: ${GATEWAY_REPORTING_URI:-http://reporting-service:8088}
+      GATEWAY_FIELDFORCE_URI: ${GATEWAY_FIELDFORCE_URI:-http://fieldforce-service:8090}
+      GATEWAY_GST_URI: ${GATEWAY_GST_URI:-http://gst-service:8091}
+      GATEWAY_LEDGER_URI: ${GATEWAY_LEDGER_URI:-http://ledger-service:8094}
+      GATEWAY_DOCTOR_URI: ${GATEWAY_DOCTOR_URI:-http://doctor-service:8092}
+      GATEWAY_APPOINTMENT_URI: ${GATEWAY_APPOINTMENT_URI:-http://appointment-service:8093}
+      GATEWAY_QUEUE_URI: ${GATEWAY_QUEUE_URI:-http://queue-management-service:8098}
+      # CRM — opt-in via Compose profile "crm" (see crm-service below)
+      GATEWAY_CRM_URI: ${GATEWAY_CRM_URI:-http://crm-service:8095}
+      # Marketplace Omnichannel — opt-in profile "marketplace" (OFF by default; no impact on ERP)
+      GATEWAY_MARKETPLACE_URI: ${GATEWAY_MARKETPLACE_URI:-http://marketplace-integration-service:8096}
+      # School subscription joins this Compose network. Direct DNS avoids empty Eureka 503s on /api/subscription.
+      GATEWAY_SCHOOL_SUBSCRIPTION_URI: ${GATEWAY_SCHOOL_SUBSCRIPTION_URI:-http://subscription-service:8182}
+      # School website/CMS live on the school host. Shop Eureka has no website-service.
+      GATEWAY_SCHOOL_WEBSITE_URI: ${GATEWAY_SCHOOL_WEBSITE_URI:-https://school.sugamflow.com}
+      GATEWAY_SCHOOL_CMS_URI: ${GATEWAY_SCHOOL_CMS_URI:-https://school.sugamflow.com}
+      GATEWAY_CORS_ALLOWED_ORIGIN_PATTERN: "${GATEWAY_CORS_ALLOWED_ORIGIN_PATTERN:-https://localhost}"
+    ports:
+      - "${GATEWAY_SERVICE_HOST_PORT:-9090}:9090"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9090/actuator/health | grep -q UP || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+
+  shop-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/shop-service:${SHOP_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: shop-service
+      SERVER_PORT: 8080
+      SHOP_DB_URL: ${SHOP_DB_URL}
+      SHOP_DB_USERNAME: ${SHOP_DB_USERNAME:-shopdb}
+      SHOP_DB_PASSWORD: ${SHOP_DB_PASSWORD:-shopdb}
+      SPRING_DATASOURCE_URL: ${SHOP_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${SHOP_DB_USERNAME:-shopdb}
+      SPRING_DATASOURCE_PASSWORD: ${SHOP_DB_PASSWORD:-shopdb}
+      SHOP_ADMIN_API_KEY: "${SHOP_ADMIN_API_KEY}"
+      SHOP_INTEGRATION_AUTH_INVITE_INTERNAL_KEY: "${SECURITY_INVITE_INTERNAL_KEY}"
+      SHOP_INTEGRATION_AUTH_BASE_URL: http://auth-service:8085
+      SHOP_INTEGRATION_NOTIFICATION_BASE_URL: http://notification-service:8087
+      SHOP_INTEGRATION_FIELDFORCE_BASE_URL: ${SHOP_INTEGRATION_FIELDFORCE_BASE_URL:-http://fieldforce-service:8090}
+      SHOP_INTEGRATION_FRONTEND_BASE_URL: "${SHOP_INTEGRATION_FRONTEND_BASE_URL:-https://sugamflow.com}"
+      SHOP_SUPPORT_STORAGE_PATH: /var/lib/sugamflow/support-attachments
+      SHOP_BRANDING_STORAGE_PATH: /var/lib/sugamflow/shop-branding
+      SHOP_PLATFORM_SUBSCRIPTION_ENABLED: ${SHOP_PLATFORM_SUBSCRIPTION_ENABLED:-false}
+      SHOP_PLATFORM_SUBSCRIPTION_BASE_URL: ${SHOP_PLATFORM_SUBSCRIPTION_BASE_URL:-}
+      SHOP_PLATFORM_SUBSCRIPTION_ORG_SOURCE: ${SHOP_PLATFORM_SUBSCRIPTION_ORG_SOURCE:-SHOP_ID}
+      SHOP_PLATFORM_SUBSCRIPTION_TIMEOUT_SECONDS: ${SHOP_PLATFORM_SUBSCRIPTION_TIMEOUT_SECONDS:-3}
+      SHOP_PLATFORM_SUBSCRIPTION_PREFER_ACCESS: ${SHOP_PLATFORM_SUBSCRIPTION_PREFER_ACCESS:-false}
+      SHOP_PLATFORM_SUBSCRIPTION_PREFER_MODULES: ${SHOP_PLATFORM_SUBSCRIPTION_PREFER_MODULES:-false}
+      SHOP_PLATFORM_SUBSCRIPTION_CUTOVER: ${SHOP_PLATFORM_SUBSCRIPTION_CUTOVER:-false}
+    volumes:
+      - shop-support-data:/var/lib/sugamflow/support-attachments
+      - shop-branding-data:/var/lib/sugamflow/shop-branding
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  product-service:
+    <<: *jvm-service
+    # Bump PRODUCT_IMAGE_TAG alone after a product-only deploy (IMAGE_TAG stays for the rest of the stack).
+    image: ${IMAGE_PREFIX:-sumanthakur30}/product-service:${PRODUCT_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: product-service
+      SERVER_PORT: 8081
+      PRODUCT_DB_URL: ${PRODUCT_DB_URL}
+      PRODUCT_DB_USERNAME: ${PRODUCT_DB_USERNAME:-productdb}
+      PRODUCT_DB_PASSWORD: ${PRODUCT_DB_PASSWORD:-productdb}
+      SPRING_DATASOURCE_URL: ${PRODUCT_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${PRODUCT_DB_USERNAME:-productdb}
+      SPRING_DATASOURCE_PASSWORD: ${PRODUCT_DB_PASSWORD:-productdb}
+      SERVICES_STOCK_BASE_URL: http://stock-service:8082
+      PRODUCT_IMPORT_STORAGE_PATH: /var/lib/sugamflow/product-import
+      PRODUCT_CAPTURE_STORAGE_PATH: /var/lib/sugamflow/product-capture
+      PRODUCT_CAPTURE_ENABLED: ${PRODUCT_CAPTURE_ENABLED:-true}
+      PRODUCT_CAPTURE_LLM_API_KEY: ${PRODUCT_CAPTURE_LLM_API_KEY:-}
+      PRODUCT_CAPTURE_LLM_BASE_URL: ${PRODUCT_CAPTURE_LLM_BASE_URL:-https://api.openai.com/v1}
+      PRODUCT_CAPTURE_LLM_MODEL: ${PRODUCT_CAPTURE_LLM_MODEL:-gpt-4o-mini}
+      PRODUCT_IMPORT_QUEUE_ENABLED: ${PRODUCT_IMPORT_QUEUE_ENABLED:-false}
+      PRODUCT_IMPORT_GST_BASE_URL: http://gst-service:8091
+      PRODUCT_IMPORT_NOTIFICATION_ENABLED: ${PRODUCT_IMPORT_NOTIFICATION_ENABLED:-false}
+      PRODUCT_IMPORT_FRONTEND_BASE_URL: ${PRODUCT_IMPORT_FRONTEND_BASE_URL:-https://sugamflow.com}
+      SPRING_AUTOCONFIGURE_EXCLUDE: ${SPRING_RABBIT_AUTOCONFIGURE_EXCLUDE:-org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration},org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      APP_CACHE_REDIS_ENABLED: ${APP_CACHE_REDIS_ENABLED:-false}
+    volumes:
+      - product-import-data:/var/lib/sugamflow/product-import
+      - product-capture-data:/var/lib/sugamflow/product-capture
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  stock-service:
+    # Bump STOCK_IMAGE_TAG alone after a stock-only deploy (IMAGE_TAG stays for the rest of the stack).
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/stock-service:${STOCK_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: stock-service
+      SERVER_PORT: 8082
+      STOCK_DB_URL: ${STOCK_DB_URL}
+      STOCK_DB_USERNAME: ${STOCK_DB_USERNAME:-stockdb}
+      STOCK_DB_PASSWORD: ${STOCK_DB_PASSWORD:-stockdb}
+      SPRING_DATASOURCE_URL: ${STOCK_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${STOCK_DB_USERNAME:-stockdb}
+      SPRING_DATASOURCE_PASSWORD: ${STOCK_DB_PASSWORD:-stockdb}
+      SERVICES_PRODUCT_BASE_URL: http://product-service:8081
+      SERVICES_ORDER_BASE_URL: http://order-service:8083
+      GST_VERIFICATION_ENABLED: ${GST_VERIFICATION_ENABLED:-false}
+      GST_VERIFICATION_BASE_URL: ${GST_VERIFICATION_BASE_URL:-https://api.sandbox.co.in}
+      GST_VERIFICATION_API_KEY: ${GST_VERIFICATION_API_KEY:-}
+      GST_VERIFICATION_API_SECRET: ${GST_VERIFICATION_API_SECRET:-}
+      LEDGER_INTEGRATION_ENABLED: ${LEDGER_INTEGRATION_ENABLED:-true}
+      LEDGER_INTEGRATION_BASE_URL: ${LEDGER_INTEGRATION_BASE_URL:-http://ledger-service:8094}
+      PROCUREMENT_OCR_ENABLED: ${PROCUREMENT_OCR_ENABLED:-false}
+      PROCUREMENT_OCR_PATH: ${PROCUREMENT_OCR_PATH:-./data/po-ocr}
+      AI_SERVICE_BASE_URL: ${AI_SERVICE_BASE_URL:-http://ai-service:8102}
+      PROCUREMENT_OCR_ENFORCE_SUBSCRIPTION: ${PROCUREMENT_OCR_ENFORCE_SUBSCRIPTION:-false}
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  order-service:
+    # Bump ORDER_IMAGE_TAG alone after a single-service fix (IMAGE_TAG stays for the rest of the stack).
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/order-service:${ORDER_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: order-service
+      SERVER_PORT: 8083
+      ORDER_DB_URL: ${ORDER_DB_URL}
+      ORDER_DB_USERNAME: ${ORDER_DB_USERNAME:-orderdb}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:-orderdb}
+      SPRING_DATASOURCE_URL: ${ORDER_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${ORDER_DB_USERNAME:-orderdb}
+      SPRING_DATASOURCE_PASSWORD: ${ORDER_DB_PASSWORD:-orderdb}
+      SERVICES_PRODUCT_BASE_URL: http://product-service:8081
+      SERVICES_USER_BASE_URL: http://user-service:8084
+      SERVICES_STOCK_BASE_URL: http://stock-service:8082
+      SERVICES_SHOP_BASE_URL: http://shop-service:8080
+      GST_INTEGRATION_ENABLED: ${GST_INTEGRATION_ENABLED:-true}
+      GST_INTEGRATION_BASE_URL: ${GST_INTEGRATION_BASE_URL:-http://gst-service:8091}
+      LEDGER_INTEGRATION_ENABLED: ${LEDGER_INTEGRATION_ENABLED:-true}
+      LEDGER_INTEGRATION_BASE_URL: ${LEDGER_INTEGRATION_BASE_URL:-http://ledger-service:8094}
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  user-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/user-service:${USER_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: user-service
+      SERVER_PORT: 8084
+      USER_DB_URL: ${USER_DB_URL}
+      USER_DB_USERNAME: ${USER_DB_USERNAME:-userdb}
+      USER_DB_PASSWORD: ${USER_DB_PASSWORD:-userdb}
+      SPRING_DATASOURCE_URL: ${USER_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${USER_DB_USERNAME:-userdb}
+      SPRING_DATASOURCE_PASSWORD: ${USER_DB_PASSWORD:-userdb}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  auth-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/auth-service:${AUTH_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: auth-service
+      SERVER_PORT: 8085
+      AUTH_DB_URL: ${AUTH_DB_URL}
+      AUTH_DB_USERNAME: ${AUTH_DB_USERNAME:-authdb}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:-authdb}
+      SPRING_DATASOURCE_URL: ${AUTH_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${AUTH_DB_USERNAME:-authdb}
+      SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD:-authdb}
+      SECURITY_JWT_SECRET: "${SECURITY_JWT_SECRET}"
+      SECURITY_INVITE_INTERNAL_KEY: "${SECURITY_INVITE_INTERNAL_KEY}"
+      AUTH_INTEGRATION_FRONTEND_BASE_URL: "${AUTH_INTEGRATION_FRONTEND_BASE_URL:-https://sugamflow.com}"
+      AUTH_INTEGRATION_NOTIFICATION_BASE_URL: http://notification-service:8087
+      AUTH_INTEGRATION_SHOP_BASE_URL: http://shop-service:8080
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8085/actuator/health | grep -q UP || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  payment-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/payment-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: payment-service
+      SERVER_PORT: 8086
+      PAYMENT_DB_URL: ${PAYMENT_DB_URL}
+      PAYMENT_DB_USERNAME: ${PAYMENT_DB_USERNAME:-paymentdb}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:-paymentdb}
+      SPRING_DATASOURCE_URL: ${PAYMENT_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${PAYMENT_DB_USERNAME:-paymentdb}
+      SPRING_DATASOURCE_PASSWORD: ${PAYMENT_DB_PASSWORD:-paymentdb}
+      SERVICES_BILLING_BASE_URL: http://user-service:8084
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  notification-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/notification-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: notification-service
+      SERVER_PORT: 8087
+      NOTIFICATION_DB_URL: ${NOTIFICATION_DB_URL}
+      NOTIFICATION_DB_USERNAME: ${NOTIFICATION_DB_USERNAME:-notificationdb}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-notificationdb}
+      SPRING_DATASOURCE_URL: ${NOTIFICATION_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${NOTIFICATION_DB_USERNAME:-notificationdb}
+      SPRING_DATASOURCE_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-notificationdb}
+      SPRING_MAIL_HOST: "${SPRING_MAIL_HOST:-localhost}"
+      SPRING_MAIL_PORT: "${SPRING_MAIL_PORT:-25}"
+      SPRING_MAIL_USERNAME: "${SPRING_MAIL_USERNAME:-}"
+      SPRING_MAIL_PASSWORD: "${SPRING_MAIL_PASSWORD:-}"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "${SPRING_MAIL_SMTP_AUTH:-false}"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "${SPRING_MAIL_SMTP_STARTTLS_ENABLE:-false}"
+      # Also bind short aliases used by application.properties
+      SPRING_MAIL_SMTP_AUTH: "${SPRING_MAIL_SMTP_AUTH:-false}"
+      SPRING_MAIL_SMTP_STARTTLS_ENABLE: "${SPRING_MAIL_SMTP_STARTTLS_ENABLE:-false}"
+      SPRING_MAIL_FROM: "${SPRING_MAIL_FROM:-${SPRING_MAIL_USERNAME:-}}"
+      # School ERP SMS / WhatsApp (notification.sms|whatsapp.provider)
+      NOTIFICATION_SMS_PROVIDER: "${NOTIFICATION_SMS_PROVIDER:-stub}"
+      NOTIFICATION_SMS_HTTP_URL: "${NOTIFICATION_SMS_HTTP_URL:-}"
+      NOTIFICATION_SMS_API_KEY: "${NOTIFICATION_SMS_API_KEY:-}"
+      NOTIFICATION_WHATSAPP_PROVIDER: "${NOTIFICATION_WHATSAPP_PROVIDER:-stub}"
+      NOTIFICATION_WHATSAPP_HTTP_URL: "${NOTIFICATION_WHATSAPP_HTTP_URL:-}"
+      NOTIFICATION_WHATSAPP_API_KEY: "${NOTIFICATION_WHATSAPP_API_KEY:-}"
+      NOTIFICATION_DEFAULT_COUNTRY_CODE: "${NOTIFICATION_DEFAULT_COUNTRY_CODE:-91}"
+      TWILIO_ACCOUNT_SID: "${TWILIO_ACCOUNT_SID:-}"
+      TWILIO_AUTH_TOKEN: "${TWILIO_AUTH_TOKEN:-}"
+      TWILIO_SMS_FROM: "${TWILIO_SMS_FROM:-}"
+      TWILIO_WHATSAPP_FROM: "${TWILIO_WHATSAPP_FROM:-}"
+      MSG91_AUTH_KEY: "${MSG91_AUTH_KEY:-}"
+      MSG91_SENDER: "${MSG91_SENDER:-}"
+      MSG91_ROUTE: "${MSG91_ROUTE:-4}"
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  reporting-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/reporting-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: reporting-service
+      SERVER_PORT: 8088
+      REPORTING_DB_URL: ${REPORTING_DB_URL}
+      REPORTING_DB_USERNAME: ${REPORTING_DB_USERNAME:-reportingdb}
+      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:-reportingdb}
+      SPRING_DATASOURCE_URL: ${REPORTING_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${REPORTING_DB_USERNAME:-reportingdb}
+      SPRING_DATASOURCE_PASSWORD: ${REPORTING_DB_PASSWORD:-reportingdb}
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  account-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/account-service:${ACCOUNT_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: account-service
+      SERVER_PORT: 8089
+      ACCOUNT_DB_URL: ${ACCOUNT_DB_URL}
+      ACCOUNT_DB_USERNAME: ${ACCOUNT_DB_USERNAME:-accountdb}
+      ACCOUNT_DB_PASSWORD: ${ACCOUNT_DB_PASSWORD:-accountdb}
+      SPRING_DATASOURCE_URL: ${ACCOUNT_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${ACCOUNT_DB_USERNAME:-accountdb}
+      SPRING_DATASOURCE_PASSWORD: ${ACCOUNT_DB_PASSWORD:-accountdb}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      ACCOUNT_INTEGRATION_AUTH_BASE_URL: http://auth-service:8085
+      ACCOUNT_INTEGRATION_AUTH_INVITE_INTERNAL_KEY: "${SECURITY_INVITE_INTERNAL_KEY:-dev-invite-key-change-in-production}"
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  fieldforce-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/fieldforce-service:${FIELDFORCE_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: fieldforce-service
+      SERVER_PORT: 8090
+      FIELDFORCE_DB_URL: ${FIELDFORCE_DB_URL}
+      FIELDFORCE_DB_USERNAME: ${FIELDFORCE_DB_USERNAME:-fieldforcedb}
+      FIELDFORCE_DB_PASSWORD: ${FIELDFORCE_DB_PASSWORD:-fieldforcedb}
+      SPRING_DATASOURCE_URL: ${FIELDFORCE_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${FIELDFORCE_DB_USERNAME:-fieldforcedb}
+      SPRING_DATASOURCE_PASSWORD: ${FIELDFORCE_DB_PASSWORD:-fieldforcedb}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${FIELDFORCE_DB_HIKARI_MAX_POOL:-4}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${FIELDFORCE_DB_HIKARI_MIN_IDLE:-2}
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  gst-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/gst-service:${GST_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: gst-service
+      SERVER_PORT: 8091
+      GST_DB_URL: ${GST_DB_URL}
+      GST_DB_USERNAME: ${GST_DB_USERNAME:-gstdb}
+      GST_DB_PASSWORD: ${GST_DB_PASSWORD:-gstdb}
+      SPRING_DATASOURCE_URL: ${GST_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${GST_DB_USERNAME:-gstdb}
+      SPRING_DATASOURCE_PASSWORD: ${GST_DB_PASSWORD:-gstdb}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${GST_DB_HIKARI_MAX_POOL:-4}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${GST_DB_HIKARI_MIN_IDLE:-2}
+      # Live GSP (default mock). Set GST_EINVOICE_PROVIDER=http + GST_GSP_BASE_URL to go live.
+      GST_EINVOICE_PROVIDER: ${GST_EINVOICE_PROVIDER:-mock}
+      GST_EWAY_PROVIDER: ${GST_EWAY_PROVIDER:-mock}
+      GST_GSP_BASE_URL: ${GST_GSP_BASE_URL:-}
+      GST_GSP_API_KEY: ${GST_GSP_API_KEY:-}
+      GST_GSP_REQUIRE_API_KEY: ${GST_GSP_REQUIRE_API_KEY:-false}
+      GST_GSP_EINVOICE_PATH: ${GST_GSP_EINVOICE_PATH:-/einvoice/generate}
+      GST_GSP_EWAY_PATH: ${GST_GSP_EWAY_PATH:-/eway/generate}
+      GST_GSP_EINVOICE_CANCEL_PATH: ${GST_GSP_EINVOICE_CANCEL_PATH:-/einvoice/cancel}
+      GST_GSP_EWAY_CANCEL_PATH: ${GST_GSP_EWAY_CANCEL_PATH:-/eway/cancel}
+      GST_GSP_EWAY_PART_B_PATH: ${GST_GSP_EWAY_PART_B_PATH:-/eway/part-b}
+      GST_VERIFICATION_ENABLED: ${GST_GSTIN_LOOKUP_ENABLED:-true}
+      GST_VERIFICATION_BASE_URL: ${GST_VERIFICATION_BASE_URL:-https://api.sandbox.co.in}
+      GST_VERIFICATION_API_KEY: ${GST_VERIFICATION_API_KEY:-}
+      GST_VERIFICATION_API_SECRET: ${GST_VERIFICATION_API_SECRET:-}
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  ledger-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/ledger-service:${LEDGER_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: ledger-service
+      SERVER_PORT: 8094
+      LEDGER_DB_URL: ${LEDGER_DB_URL}
+      LEDGER_DB_USERNAME: ${LEDGER_DB_USERNAME:-ledgerdb}
+      LEDGER_DB_PASSWORD: ${LEDGER_DB_PASSWORD:-ledgerdb}
+      SPRING_DATASOURCE_URL: ${LEDGER_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${LEDGER_DB_USERNAME:-ledgerdb}
+      SPRING_DATASOURCE_PASSWORD: ${LEDGER_DB_PASSWORD:-ledgerdb}
+      # Flyway needs more than tiny pools; keep above DB_POOL_MAX_SIZE=2–3.
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${LEDGER_DB_HIKARI_MAX_POOL:-8}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${LEDGER_DB_HIKARI_MIN_IDLE:-1}
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  doctor-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/doctor-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: doctor-service
+      SERVER_PORT: 8092
+      DOCTOR_DB_URL: ${DOCTOR_DB_URL}
+      DOCTOR_DB_USERNAME: ${DOCTOR_DB_USERNAME:-doctordb}
+      DOCTOR_DB_PASSWORD: ${DOCTOR_DB_PASSWORD:-doctordb}
+      SPRING_DATASOURCE_URL: ${DOCTOR_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${DOCTOR_DB_USERNAME:-doctordb}
+      SPRING_DATASOURCE_PASSWORD: ${DOCTOR_DB_PASSWORD:-doctordb}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${DOCTOR_DB_HIKARI_MAX_POOL:-4}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${DOCTOR_DB_HIKARI_MIN_IDLE:-2}
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  appointment-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/appointment-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: appointment-service
+      SERVER_PORT: 8093
+      APPOINTMENT_DB_URL: ${APPOINTMENT_DB_URL}
+      APPOINTMENT_DB_USERNAME: ${APPOINTMENT_DB_USERNAME:-appointmentdb}
+      APPOINTMENT_DB_PASSWORD: ${APPOINTMENT_DB_PASSWORD:-appointmentdb}
+      SPRING_DATASOURCE_URL: ${APPOINTMENT_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${APPOINTMENT_DB_USERNAME:-appointmentdb}
+      SPRING_DATASOURCE_PASSWORD: ${APPOINTMENT_DB_PASSWORD:-appointmentdb}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${APPOINTMENT_DB_HIKARI_MAX_POOL:-4}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${APPOINTMENT_DB_HIKARI_MIN_IDLE:-2}
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  queue-management-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/queue-management-service:${QUEUE_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: queue-management-service
+      SERVER_PORT: 8098
+      QUEUE_DB_URL: ${QUEUE_DB_URL}
+      QUEUE_DB_USERNAME: ${QUEUE_DB_USERNAME:-queuedb}
+      QUEUE_DB_PASSWORD: ${QUEUE_DB_PASSWORD:-queuedb}
+      SPRING_DATASOURCE_URL: ${QUEUE_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${QUEUE_DB_USERNAME:-queuedb}
+      SPRING_DATASOURCE_PASSWORD: ${QUEUE_DB_PASSWORD:-queuedb}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${QUEUE_DB_HIKARI_MAX_POOL:-4}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${QUEUE_DB_HIKARI_MIN_IDLE:-2}
+    # Phase 1: internal only (no host port binding)
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  # Product CRM (sprints 1–10) — opt-in: free RAM by stopping school/hospital first, then:
+  #   docker compose -f docker-compose.ec2-rds.yml --env-file .env.production --profile crm up -d crm-service
+  #   docker compose -f docker-compose.ec2-rds.yml --env-file .env.production up -d --force-recreate gateway-service
+  # Flyway table flyway_schema_history_crm → expect max version 24. See scripts/ec2-start-crm.sh
+  crm-service:
+    <<: *jvm-service
+    profiles: ["crm"]
+    image: ${IMAGE_PREFIX:-sumanthakur30}/crm-service:${CRM_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    mem_limit: ${CRM_SERVICE_MEM_LIMIT:-400m}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: crm-service
+      SERVER_PORT: 8095
+      CRM_DB_URL: ${CRM_DB_URL}
+      CRM_DB_USERNAME: ${CRM_DB_USERNAME:-crmdb}
+      CRM_DB_PASSWORD: ${CRM_DB_PASSWORD:-crmdb}
+      SPRING_DATASOURCE_URL: ${CRM_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${CRM_DB_USERNAME:-crmdb}
+      SPRING_DATASOURCE_PASSWORD: ${CRM_DB_PASSWORD:-crmdb}
+      # Day-1 safe defaults for test EC2 (enable later with real URLs/keys)
+      CRM_ENTITLEMENT_ENABLED: ${CRM_ENTITLEMENT_ENABLED:-false}
+      CRM_CONVERT_ENABLED: ${CRM_CONVERT_ENABLED:-false}
+      CRM_ORDER_ENABLED: ${CRM_ORDER_ENABLED:-false}
+      CRM_NOTIFICATION_ENABLED: ${CRM_NOTIFICATION_ENABLED:-false}
+      CRM_AI_ENABLED: ${CRM_AI_ENABLED:-true}
+      CRM_AI_PROVIDER: ${CRM_AI_PROVIDER:-HEURISTIC}
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  # Optional Omnichannel Marketplace — profile "marketplace" only. Own DB; does not alter stock math.
+  #   docker compose -f docker-compose.ec2-rds.yml --env-file .env.production --profile marketplace up -d marketplace-integration-service
+  marketplace-integration-service:
+    <<: *jvm-service
+    profiles: ["marketplace"]
+    image: ${IMAGE_PREFIX:-sumanthakur30}/marketplace-integration-service:${MARKETPLACE_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    mem_limit: ${MARKETPLACE_SERVICE_MEM_LIMIT:-400m}
+    environment:
+      <<: *common-env
+      EUREKA_INSTANCE_HOSTNAME: marketplace-integration-service
+      SERVER_PORT: 8096
+      MARKETPLACE_DB_URL: ${MARKETPLACE_DB_URL}
+      MARKETPLACE_DB_USERNAME: ${MARKETPLACE_DB_USERNAME:-marketplacedb}
+      MARKETPLACE_DB_PASSWORD: ${MARKETPLACE_DB_PASSWORD:-marketplacedb}
+      SPRING_DATASOURCE_URL: ${MARKETPLACE_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${MARKETPLACE_DB_USERNAME:-marketplacedb}
+      SPRING_DATASOURCE_PASSWORD: ${MARKETPLACE_DB_PASSWORD:-marketplacedb}
+      MARKETPLACE_ENTITLEMENT_ENABLED: ${MARKETPLACE_ENTITLEMENT_ENABLED:-false}
+      MARKETPLACE_STOCK_BASE_URL: ${MARKETPLACE_STOCK_BASE_URL:-http://stock-service:8082}
+      MARKETPLACE_ORDER_BASE_URL: ${MARKETPLACE_ORDER_BASE_URL:-http://order-service:8083}
+      MARKETPLACE_SHOP_BASE_URL: ${MARKETPLACE_SHOP_BASE_URL:-http://shop-service:8080}
+      SERVER_ERROR_INCLUDE_MESSAGE: always
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "5"
+      # India Selling Partner. Leave secrets empty until live keys are added to .env.production.
+      MARKETPLACE_AMAZON_APPLICATION_ID: ${MARKETPLACE_AMAZON_APPLICATION_ID:-}
+      MARKETPLACE_AMAZON_LWA_CLIENT_ID: ${MARKETPLACE_AMAZON_LWA_CLIENT_ID:-}
+      MARKETPLACE_AMAZON_LWA_CLIENT_SECRET: ${MARKETPLACE_AMAZON_LWA_CLIENT_SECRET:-}
+      MARKETPLACE_AMAZON_AWS_ACCESS_KEY_ID: ${MARKETPLACE_AMAZON_AWS_ACCESS_KEY_ID:-}
+      MARKETPLACE_AMAZON_AWS_SECRET_ACCESS_KEY: ${MARKETPLACE_AMAZON_AWS_SECRET_ACCESS_KEY:-}
+      MARKETPLACE_AMAZON_REGION: ${MARKETPLACE_AMAZON_REGION:-eu-west-1}
+      MARKETPLACE_AMAZON_ENDPOINT: ${MARKETPLACE_AMAZON_ENDPOINT:-https://sellingpartnerapi-eu.amazon.com}
+      MARKETPLACE_AMAZON_MARKETPLACE_ID: ${MARKETPLACE_AMAZON_MARKETPLACE_ID:-A21TJRUUN4KGV}
+      MARKETPLACE_AMAZON_DRAFT_CONSENT: ${MARKETPLACE_AMAZON_DRAFT_CONSENT:-true}
+      MARKETPLACE_AMAZON_AUTHORIZE_URL: ${MARKETPLACE_AMAZON_AUTHORIZE_URL:-https://sellercentral.amazon.in/apps/authorize/consent}
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+volumes:
+  product-import-data:
+  product-capture-data:
+  shop-support-data:
+  shop-branding-data:

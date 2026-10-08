@@ -1,0 +1,90 @@
+# Overlay: IPD clinical + Accommodation Engine on EC2 + RDS.
+#
+# Usage (with main stack):
+#   docker compose -f docker-compose.ec2-rds.yml -f docker-compose.ec2-ipd.yml --env-file .env.production up -d
+#
+# Required .env.production keys:
+#   IPD_DB_URL=jdbc:postgresql://YOUR_RDS:5432/ipddb?sslmode=require
+#   IPD_DB_USERNAME=...
+#   IPD_DB_PASSWORD=...
+#   IMAGE_PREFIX / IMAGE_TAG (or IPD_IMAGE_TAG / ACCOMMODATION_IMAGE_TAG)
+#   SECURITY_JWT_SECRET, SECURITY_INVITE_INTERNAL_KEY, SHOP_ADMIN_API_KEY
+#     (same values as main stack — ProductionSecretsValidator blocks prod boot without them)
+#   ORDER_SERVICE reachable as order-service:8083 for billing sync
+
+name: sumanthakur30
+
+x-logging: &docker-logging
+  driver: json-file
+  options:
+    max-size: "25m"
+    max-file: "3"
+
+x-jvm-service: &jvm-service
+  restart: unless-stopped
+  logging: *docker-logging
+  mem_limit: ${JVM_SERVICE_MEM_LIMIT:-400m}
+  oom_score_adj: 300
+
+x-common-env: &common-env
+  SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+  TZ: Asia/Kolkata
+  JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Asia/Kolkata -Xms128m -Xmx256m -XX:+ExitOnOutOfMemoryError}
+  SPRING_CLOUD_CONFIG_URI: http://config-service:8888
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka
+  EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+  SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${DB_POOL_MAX_SIZE:-3}
+  SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${DB_POOL_MIN_IDLE:-1}
+  SECURITY_JWT_ENFORCE: "${SECURITY_JWT_ENFORCE:-true}"
+  SECURITY_JWT_SECRET: "${SECURITY_JWT_SECRET}"
+  SECURITY_INVITE_INTERNAL_KEY: "${SECURITY_INVITE_INTERNAL_KEY}"
+  SECURITY_INTERNAL_API_KEY: "${SECURITY_INTERNAL_API_KEY:-${SECURITY_INVITE_INTERNAL_KEY}}"
+  # Required by security-common ProductionSecretsValidator in prod
+  SHOP_ADMIN_API_KEY: "${SHOP_ADMIN_API_KEY}"
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://127.0.0.1:4318}
+  OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_traceidratio}
+  OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-0.15}
+  SUGAM_ENVIRONMENT: ${SUGAM_ENVIRONMENT:-prod}
+  SUGAM_OBSERVABILITY_ENABLED: ${SUGAM_OBSERVABILITY_ENABLED:-true}
+
+services:
+  accommodation-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/accommodation-service:${ACCOMMODATION_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8101
+      SPRING_DATASOURCE_URL: ${IPD_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${IPD_DB_USERNAME:-ipddb}
+      SPRING_DATASOURCE_PASSWORD: ${IPD_DB_PASSWORD:-ipddb}
+    depends_on:
+      discovery-service:
+        condition: service_started
+
+  ipd-service:
+    <<: *jvm-service
+    image: ${IMAGE_PREFIX:-sumanthakur30}/ipd-service:${IPD_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8100
+      SPRING_DATASOURCE_URL: ${IPD_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${IPD_DB_USERNAME:-ipddb}
+      SPRING_DATASOURCE_PASSWORD: ${IPD_DB_PASSWORD:-ipddb}
+      ORDER_SERVICE_BASE_URL: ${ORDER_SERVICE_BASE_URL:-http://order-service:8083}
+      ORDER_BILLING_SYNC_ENABLED: ${ORDER_BILLING_SYNC_ENABLED:-true}
+      ACCOMMODATION_SERVICE_BASE_URL: ${ACCOMMODATION_SERVICE_BASE_URL:-http://accommodation-service:8101}
+      FORMS_SERVICE_BASE_URL: ${FORMS_SERVICE_BASE_URL:-http://host.docker.internal:8183}
+      FORMS_SERVICE_ENABLED: ${FORMS_SERVICE_ENABLED:-false}
+    depends_on:
+      discovery-service:
+        condition: service_started
+      accommodation-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+
+  # Extend gateway with direct DNS fallbacks (same pattern as other GATEWAY_* URIs).
+  gateway-service:
+    environment:
+      GATEWAY_IPD_URI: ${GATEWAY_IPD_URI:-http://ipd-service:8100}
+      GATEWAY_ACCOMMODATION_URI: ${GATEWAY_ACCOMMODATION_URI:-http://accommodation-service:8101}

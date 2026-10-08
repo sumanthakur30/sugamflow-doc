@@ -1,0 +1,81 @@
+# Local IPD + Accommodation on the existing Compose network (not Maven-on-host).
+#
+#   $env:COMPOSE_ENV_FILES='.env.local'
+#   docker compose -f docker-compose.yml -f docker-compose.ipd.yml --profile ipd up -d accommodation-service ipd-service
+#   docker compose -f docker-compose.yml -f docker-compose.ipd.yml up -d --no-deps --force-recreate gateway-service
+#
+# Or: .\scripts\start-local-ipd.ps1
+#
+# Uses published Hub images by default (same tags as EC2). Host Postgres ipddb.
+# EC2 stays on docker-compose.ec2-ipd.yml — do not use this overlay on the server.
+
+services:
+  accommodation-service:
+    profiles: ["ipd"]
+    image: ${IMAGE_PREFIX:-sumanthakur30}/accommodation-service:${ACCOMMODATION_IMAGE_TAG:-1.0.2}
+    restart: unless-stopped
+    environment:
+      SECURITY_JWT_ENFORCE: "false"
+      SECURITY_JWT_SECRET: "${SECURITY_JWT_SECRET:-01234567890123456789012345678901}"
+      SECURITY_INTERNAL_API_KEY: "${SECURITY_INVITE_INTERNAL_KEY:-dev-invite-key-change-in-production}"
+      SPRING_PROFILES_ACTIVE: local
+      TZ: Asia/Kolkata
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Asia/Kolkata}
+      SPRING_CLOUD_CONFIG_ENABLED: "false"
+      EUREKA_CLIENT_ENABLED: "false"
+      SERVER_PORT: 8101
+      SPRING_DATASOURCE_URL: ${IPD_DB_URL:-jdbc:postgresql://host.docker.internal:5432/ipddb}
+      SPRING_DATASOURCE_USERNAME: ${IPD_DB_USERNAME:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${IPD_DB_PASSWORD:-postgres}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${DB_POOL_MAX_SIZE:-4}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${DB_POOL_MIN_IDLE:-1}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://host.docker.internal:4318}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_traceidratio}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
+      SUGAM_ENVIRONMENT: ${SUGAM_ENVIRONMENT:-local}
+      SUGAM_OBSERVABILITY_ENABLED: ${SUGAM_OBSERVABILITY_ENABLED:-true}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${ACCOMMODATION_SERVICE_HOST_PORT:-8101}:8101"
+
+  ipd-service:
+    profiles: ["ipd"]
+    image: ${IMAGE_PREFIX:-sumanthakur30}/ipd-service:${IPD_IMAGE_TAG:-1.0.4}
+    restart: unless-stopped
+    environment:
+      SECURITY_JWT_ENFORCE: "false"
+      SECURITY_JWT_SECRET: "${SECURITY_JWT_SECRET:-01234567890123456789012345678901}"
+      SECURITY_INTERNAL_API_KEY: "${SECURITY_INVITE_INTERNAL_KEY:-dev-invite-key-change-in-production}"
+      SPRING_PROFILES_ACTIVE: local
+      TZ: Asia/Kolkata
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Asia/Kolkata}
+      SPRING_CLOUD_CONFIG_ENABLED: "false"
+      EUREKA_CLIENT_ENABLED: "false"
+      SERVER_PORT: 8100
+      SPRING_DATASOURCE_URL: ${IPD_DB_URL:-jdbc:postgresql://host.docker.internal:5432/ipddb}
+      SPRING_DATASOURCE_USERNAME: ${IPD_DB_USERNAME:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${IPD_DB_PASSWORD:-postgres}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${DB_POOL_MAX_SIZE:-4}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${DB_POOL_MIN_IDLE:-1}
+      ACCOMMODATION_SERVICE_BASE_URL: ${ACCOMMODATION_SERVICE_BASE_URL:-http://accommodation-service:8101}
+      ORDER_SERVICE_BASE_URL: ${ORDER_SERVICE_BASE_URL:-http://order-service:8083}
+      ORDER_BILLING_SYNC_ENABLED: ${ORDER_BILLING_SYNC_ENABLED:-true}
+      FORMS_SERVICE_ENABLED: ${FORMS_SERVICE_ENABLED:-false}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://host.docker.internal:4318}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_traceidratio}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
+      SUGAM_ENVIRONMENT: ${SUGAM_ENVIRONMENT:-local}
+      SUGAM_OBSERVABILITY_ENABLED: ${SUGAM_OBSERVABILITY_ENABLED:-true}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${IPD_SERVICE_HOST_PORT:-8100}:8100"
+    depends_on:
+      accommodation-service:
+        condition: service_started
+
+  gateway-service:
+    environment:
+      GATEWAY_IPD_URI: ${GATEWAY_IPD_URI:-http://ipd-service:8100}
+      GATEWAY_ACCOMMODATION_URI: ${GATEWAY_ACCOMMODATION_URI:-http://accommodation-service:8101}

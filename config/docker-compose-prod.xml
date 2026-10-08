@@ -1,0 +1,127 @@
+name: sugamflow
+
+x-common-env: &common-env
+  SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+  SPRING_CLOUD_CONFIG_URI: http://config-service:8888
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka
+  EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+  SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${DB_POOL_MAX_SIZE:-10}
+  SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${DB_POOL_MIN_IDLE:-2}
+  SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: ${DB_POOL_IDLE_TIMEOUT_MS:-120000}
+  SPRING_DATASOURCE_HIKARI_MAX_LIFETIME: ${DB_POOL_MAX_LIFETIME_MS:-600000}
+  SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: ${DB_POOL_CONNECTION_TIMEOUT_MS:-30000}
+
+x-service-defaults: &service-defaults
+  env_file:
+    - .env
+  restart: unless-stopped
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  config-service:
+    <<: *service-defaults
+    image: ${IMAGE_PREFIX}/config-service:${IMAGE_TAG}
+    environment:
+      SERVER_PORT: 8888
+      SPRING_PROFILES_ACTIVE: native,docker
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:/tmp
+
+  discovery-service:
+    <<: *service-defaults
+    image: ${IMAGE_PREFIX}/discovery-service:${IMAGE_TAG}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8761
+    depends_on:
+      config-service:
+        condition: service_started
+
+  gateway-service:
+    <<: *service-defaults
+    image: ${IMAGE_PREFIX}/gateway-service:${IMAGE_TAG}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 9090
+      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET}
+    ports:
+      - "${GATEWAY_HOST_PORT:-9090}:9090"
+    depends_on:
+      discovery-service:
+        condition: service_started
+
+  shop-service:
+    <<: *service-defaults
+    image: ${IMAGE_PREFIX}/shop-service:${IMAGE_TAG}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8080
+      SHOP_DB_URL: ${SHOP_DB_URL}
+      SHOP_DB_USERNAME: ${SHOP_DB_USERNAME}
+      SHOP_DB_PASSWORD: ${SHOP_DB_PASSWORD}
+      SPRING_DATASOURCE_URL: ${SHOP_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${SHOP_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SHOP_DB_PASSWORD}
+      SHOP_ADMIN_API_KEY: ${SHOP_ADMIN_API_KEY}
+      SHOP_INTEGRATION_AUTH_BASE_URL: http://auth-service:8085
+      SHOP_INTEGRATION_NOTIFICATION_BASE_URL: http://notification-service:8087
+      SHOP_INTEGRATION_FRONTEND_BASE_URL: ${SHOP_INTEGRATION_FRONTEND_BASE_URL}
+    depends_on:
+      discovery-service:
+        condition: service_started
+
+  product-service:
+    <<: *service-defaults
+    image: ${IMAGE_PREFIX}/product-service:${IMAGE_TAG}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8081
+      PRODUCT_DB_URL: ${PRODUCT_DB_URL}
+      PRODUCT_DB_USERNAME: ${PRODUCT_DB_USERNAME}
+      PRODUCT_DB_PASSWORD: ${PRODUCT_DB_PASSWORD}
+      SPRING_DATASOURCE_URL: ${PRODUCT_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${PRODUCT_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${PRODUCT_DB_PASSWORD}
+      SERVICES_STOCK_BASE_URL: http://stock-service:8082
+    depends_on:
+      discovery-service:
+        condition: service_started
+
+  stock-service:
+    <<: *service-defaults
+    image: ${IMAGE_PREFIX}/stock-service:${IMAGE_TAG}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8082
+      STOCK_DB_URL: ${STOCK_DB_URL}
+      STOCK_DB_USERNAME: ${STOCK_DB_USERNAME}
+      STOCK_DB_PASSWORD: ${STOCK_DB_PASSWORD}
+      SPRING_DATASOURCE_URL: ${STOCK_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${STOCK_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${STOCK_DB_PASSWORD}
+      SERVICES_PRODUCT_BASE_URL: http://product-service:8081
+    depends_on:
+      discovery-service:
+        condition: service_started
+
+  order-service:
+    <<: *service-defaults
+    image: ${IMAGE_PREFIX}/order-service:${IMAGE_TAG}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8083
+      ORDER_DB_URL: ${ORDER_DB_URL}
+      ORDER_DB_USERNAME: ${ORDER_DB_USERNAME}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD}
+      SPRING_DATASOURCE_URL: ${ORDER_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${ORDER_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${ORDER_DB_PASSWORD}
+      SERVICES_PRODUCT_BASE_URL: http://product-service:8081
+      SERVICES_USER_BASE_URL: http://user-service

@@ -1,0 +1,825 @@
+name: sumanthakur30
+
+# Image tag for all services. Defaults match the Docker Hub images used on EC2.
+# Examples: set IMAGE_TAG=1.0.0 then: docker compose build && docker compose push
+# Windows: prefer .\build-docker.ps1 (rebuilds common-libs, limits parallel Maven builds).
+# If you run `docker compose build` directly, rebuild libs first or use .\compose-local.ps1 build:
+#   docker build -f docker/Dockerfile.common-libs -t sugamflow-common-libs:local .
+# Or: $env:COMPOSE_PARALLEL_LIMIT=2; docker compose build
+# Or: export IMAGE_TAG=$(git describe --tags --always)
+#
+# Registry / namespace (same pattern as shop-service for every service):
+#   Default IMAGE_PREFIX=sumanthakur30  ->  sumanthakur30/user-service:1.0.0
+#   Local/dev: IMAGE_PREFIX must equal your Docker Hub user/org when pushing (e.g. sumanthakur30), not the project name.
+#   ECR: IMAGE_PREFIX=123456789012.dkr.ecr.ap-south-1.amazonaws.com/sugamflow
+#
+# Database: for local dev, keep variables in `.env.local` (gitignored). Compose auto-loads `.env` only - use one of:
+#   - .\compose-local.ps1 <args>   (sets COMPOSE_ENV_FILES=.env.local then runs docker compose)
+#   - .\start-local.ps1            (uses --env-file .env.local)
+#   - $env:COMPOSE_ENV_FILES='.env.local'; docker compose up -d
+# Copy `.env.example` ? `.env.local` and adjust. Production: `start-prod.sh` / `--env-file .env.production`.
+#
+# Profiles: default is "local" for local Compose. On EC2/RDS set in .env:
+#   SPRING_PROFILES_ACTIVE=prod
+# so application-prod.properties loads (validate ddl, prod logging, etc.).
+
+x-common-env: &common-env
+  SECURITY_JWT_ENFORCE: "${SECURITY_JWT_ENFORCE:-true}"
+  SECURITY_JWT_SECRET: "${SECURITY_JWT_SECRET:-01234567890123456789012345678901}"
+  SECURITY_INTERNAL_API_KEY: "${SECURITY_INVITE_INTERNAL_KEY:-dev-invite-key-change-in-production}"
+  SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+  TZ: Asia/Kolkata
+  JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Asia/Kolkata}
+  SPRING_CLOUD_CONFIG_URI: http://config-service:8888
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka
+  # Prevent local PostgreSQL connection exhaustion when many services are up.
+  SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${DB_POOL_MAX_SIZE:-4}
+  SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${DB_POOL_MIN_IDLE:-1}
+  SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: ${DB_POOL_IDLE_TIMEOUT_MS:-120000}
+  SPRING_DATASOURCE_HIKARI_MAX_LIFETIME: ${DB_POOL_MAX_LIFETIME_MS:-600000}
+  SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: ${DB_POOL_CONNECTION_TIMEOUT_MS:-30000}
+  # Register container IP on the Compose network so peers/gateway always get a reachable address (avoids random hostname / 503 from lb://).
+  EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+  # Host JVM default is 127.0.0.1:4318. Inside Compose that is the container, not the
+  # observability collector on the laptop. Override in .env.production for Grafana Cloud.
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://host.docker.internal:4318}
+  OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_traceidratio}
+  OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
+  SUGAM_ENVIRONMENT: ${SUGAM_ENVIRONMENT:-local}
+  SUGAM_OBSERVABILITY_ENABLED: ${SUGAM_OBSERVABILITY_ENABLED:-true}
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_HOST_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    profiles: ["queue"]
+    image: rabbitmq:3-alpine
+    ports:
+      - "${RABBITMQ_HOST_PORT:-5672}:5672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-sugamflow}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-sugamflow}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "${MAILHOG_SMTP_HOST_PORT:-1025}:1025"
+      - "${MAILHOG_UI_HOST_PORT:-8025}:8025"
+
+  config-service:
+    build:
+      context: .
+      dockerfile: config-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/config-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      SERVER_PORT: 8888
+      SPRING_PROFILES_ACTIVE: native,docker
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:/tmp
+    # Host port overridable via .env (CONFIG_SERVICE_HOST_PORT). Inside Docker, clients still use http://config-service:8888.
+    # Canonical host port is 8888 (same as in-container). Do not use 18888 for new setups.
+    ports:
+      - "${CONFIG_SERVICE_HOST_PORT:-8888}:8888"
+
+  discovery-service:
+    build:
+      context: .
+      dockerfile: discovery-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/discovery-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8761
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Host port overridable via .env (DISCOVERY_SERVICE_HOST_PORT). Containers still use http://discovery-service:8761/eureka.
+    # Canonical host port is 8761 (same as in-container / school jar defaults). One Eureka for Docker + host jars.
+    # Legacy 18761 caused school 503s when jars registered to a dead :8761 while Docker published :18761.
+    ports:
+      - "${DISCOVERY_SERVICE_HOST_PORT:-8761}:8761"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8761/actuator/health | grep -q UP || exit 1"]
+      # Eureka is slow to boot on Windows Docker (~5–6 min); 90s start_period caused false "unhealthy".
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 420s
+    depends_on:
+      config-service:
+        condition: service_started
+
+  gateway-service:
+    build:
+      context: .
+      dockerfile: gateway-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/gateway-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 9090
+      SECURITY_JWT_SECRET: "${SECURITY_JWT_SECRET:-01234567890123456789012345678901}"
+      # Avoid login hangs when Eureka is slow or auth not registered yet (default lb://auth-service).
+      GATEWAY_AUTH_URI: ${GATEWAY_AUTH_URI:-http://auth-service:8085}
+      # Direct Compose DNS when Eureka registry is empty or slow (avoids 503 on core POS APIs).
+      GATEWAY_PRODUCT_URI: ${GATEWAY_PRODUCT_URI:-http://product-service:8081}
+      GATEWAY_STOCK_URI: ${GATEWAY_STOCK_URI:-http://stock-service:8082}
+      GATEWAY_USER_URI: ${GATEWAY_USER_URI:-http://user-service:8084}
+      GATEWAY_SHOP_URI: ${GATEWAY_SHOP_URI:-http://shop-service:8080}
+      GATEWAY_ACCOUNT_URI: ${GATEWAY_ACCOUNT_URI:-http://account-service:8089}
+      # Empty Eureka → 503 on GET /api/v1/orders; direct Compose DNS bypasses lb://order-service.
+      GATEWAY_ORDER_URI: ${GATEWAY_ORDER_URI:-http://order-service:8083}
+      # Same for field-force (default lb://fieldforce-service) - empty Eureka ? 503 on /api/v1/salesmen etc.
+      GATEWAY_FIELDFORCE_URI: ${GATEWAY_FIELDFORCE_URI:-http://fieldforce-service:8090}
+      GATEWAY_CRM_URI: ${GATEWAY_CRM_URI:-http://host.docker.internal:8095}
+      GATEWAY_GST_URI: ${GATEWAY_GST_URI:-http://gst-service:8091}
+      GATEWAY_LEDGER_URI: ${GATEWAY_LEDGER_URI:-http://ledger-service:8094}
+      GATEWAY_DOCTOR_URI: ${GATEWAY_DOCTOR_URI:-http://doctor-service:8092}
+      GATEWAY_APPOINTMENT_URI: ${GATEWAY_APPOINTMENT_URI:-http://appointment-service:8093}
+      GATEWAY_QUEUE_URI: ${GATEWAY_QUEUE_URI:-http://queue-management-service:8098}
+      # AI (optional). Host Maven: http://host.docker.internal:8102. Compose profile ai: http://ai-service:8102
+      GATEWAY_AI_URI: ${GATEWAY_AI_URI:-http://host.docker.internal:8102}
+      # IPD / beds — local Maven on host :8100/:8101 (docker IPD overlay overrides these).
+      GATEWAY_IPD_URI: ${GATEWAY_IPD_URI:-http://host.docker.internal:8100}
+      GATEWAY_ACCOMMODATION_URI: ${GATEWAY_ACCOMMODATION_URI:-http://host.docker.internal:8101}
+      # School ERP jars on host (Eureka often empty for school-* from Docker gateway).
+      GATEWAY_SCHOOL_SUBSCRIPTION_URI: ${GATEWAY_SCHOOL_SUBSCRIPTION_URI:-http://host.docker.internal:8182}
+      GATEWAY_SCHOOL_SETTINGS_URI: ${GATEWAY_SCHOOL_SETTINGS_URI:-http://host.docker.internal:8181}
+      GATEWAY_SCHOOL_SUPPORT_URI: ${GATEWAY_SCHOOL_SUPPORT_URI:-http://support-service:8195}
+      GATEWAY_SCHOOL_COMPLIANCE_URI: ${GATEWAY_SCHOOL_COMPLIANCE_URI:-http://host.docker.internal:8202}
+      # Marketplace is an opt-in profile. Direct Compose DNS avoids 503 when Eureka has not registered it yet.
+      GATEWAY_MARKETPLACE_URI: ${GATEWAY_MARKETPLACE_URI:-http://marketplace-integration-service:8096}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${GATEWAY_SERVICE_HOST_PORT:-9090}:9090"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  shop-service:
+    build:
+      context: .
+      dockerfile: shop-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/shop-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8080
+      SHOP_DB_URL: ${SHOP_DB_URL:-jdbc:postgresql://host.docker.internal:5432/shopdb}
+      SHOP_DB_USERNAME: ${SHOP_DB_USERNAME:-shopdb}
+      SHOP_DB_PASSWORD: ${SHOP_DB_PASSWORD:-shopdb}
+      SPRING_DATASOURCE_URL: ${SHOP_DB_URL:-jdbc:postgresql://host.docker.internal:5432/shopdb}
+      SPRING_DATASOURCE_USERNAME: ${SHOP_DB_USERNAME:-shopdb}
+      SPRING_DATASOURCE_PASSWORD: ${SHOP_DB_PASSWORD:-shopdb}
+      SHOP_ADMIN_API_KEY: "${SHOP_ADMIN_API_KEY:-dev-shop-admin-key}"
+      SHOP_INTEGRATION_AUTH_BASE_URL: http://auth-service:8085
+      SHOP_INTEGRATION_PRODUCT_BASE_URL: http://product-service:8081
+      SHOP_INTEGRATION_AUTH_INVITE_INTERNAL_KEY: "${SECURITY_INVITE_INTERNAL_KEY:-dev-invite-key-change-in-production}"
+      SHOP_INTEGRATION_NOTIFICATION_BASE_URL: http://notification-service:8087
+      SHOP_INTEGRATION_FIELDFORCE_BASE_URL: ${SHOP_INTEGRATION_FIELDFORCE_BASE_URL:-http://fieldforce-service:8090}
+      SHOP_INTEGRATION_FRONTEND_BASE_URL: "${SHOP_INTEGRATION_FRONTEND_BASE_URL:-http://localhost:4200}"
+      SHOP_SUPPORT_STORAGE_PATH: /var/lib/sugamflow/support-attachments
+      SHOP_BRANDING_STORAGE_PATH: /var/lib/sugamflow/shop-branding
+      # Phase 2.2 platform subscription bridge (default OFF). Example:
+      # SHOP_PLATFORM_SUBSCRIPTION_ENABLED=true
+      # SHOP_PLATFORM_SUBSCRIPTION_BASE_URL=http://host.docker.internal:8182
+      SHOP_PLATFORM_SUBSCRIPTION_ENABLED: ${SHOP_PLATFORM_SUBSCRIPTION_ENABLED:-false}
+      SHOP_PLATFORM_SUBSCRIPTION_BASE_URL: ${SHOP_PLATFORM_SUBSCRIPTION_BASE_URL:-}
+      SHOP_PLATFORM_SUBSCRIPTION_ORG_SOURCE: ${SHOP_PLATFORM_SUBSCRIPTION_ORG_SOURCE:-SHOP_ID}
+      SHOP_PLATFORM_SUBSCRIPTION_TIMEOUT_SECONDS: ${SHOP_PLATFORM_SUBSCRIPTION_TIMEOUT_SECONDS:-3}
+      SHOP_PLATFORM_SUBSCRIPTION_PREFER_ACCESS: ${SHOP_PLATFORM_SUBSCRIPTION_PREFER_ACCESS:-false}
+      SHOP_PLATFORM_SUBSCRIPTION_PREFER_MODULES: ${SHOP_PLATFORM_SUBSCRIPTION_PREFER_MODULES:-false}
+      SHOP_PLATFORM_SUBSCRIPTION_CUTOVER: ${SHOP_PLATFORM_SUBSCRIPTION_CUTOVER:-false}
+    volumes:
+      - shop-support-data:/var/lib/sugamflow/support-attachments
+      - shop-branding-data:/var/lib/sugamflow/shop-branding
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${SHOP_SERVICE_HOST_PORT:-8080}:8080"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  product-service:
+    build:
+      context: .
+      dockerfile: product-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/product-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8081
+      PRODUCT_DB_URL: ${PRODUCT_DB_URL:-jdbc:postgresql://host.docker.internal:5432/productdb}
+      PRODUCT_DB_USERNAME: ${PRODUCT_DB_USERNAME:-productdb}
+      PRODUCT_DB_PASSWORD: ${PRODUCT_DB_PASSWORD:-productdb}
+      SPRING_DATASOURCE_URL: ${PRODUCT_DB_URL:-jdbc:postgresql://host.docker.internal:5432/productdb}
+      SPRING_DATASOURCE_USERNAME: ${PRODUCT_DB_USERNAME:-productdb}
+      SPRING_DATASOURCE_PASSWORD: ${PRODUCT_DB_PASSWORD:-productdb}
+      SERVICES_STOCK_BASE_URL: http://stock-service:8082
+      # Import queue: off by default until RabbitMQ image is available (docker compose --profile queue up -d).
+      PRODUCT_IMPORT_QUEUE_ENABLED: ${PRODUCT_IMPORT_QUEUE_ENABLED:-false}
+      SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST:-rabbitmq}
+      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-sugamflow}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-sugamflow}
+      # Rabbit always excluded until queue profile. Redis excluded by default; to enable product page Redis cache set:
+      #   APP_CACHE_REDIS_ENABLED=true and SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      SPRING_AUTOCONFIGURE_EXCLUDE: ${PRODUCT_SPRING_AUTOCONFIGURE_EXCLUDE:-org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration}
+      PRODUCT_IMPORT_STORAGE_PATH: /var/lib/sugamflow/product-import
+      PRODUCT_CAPTURE_STORAGE_PATH: /var/lib/sugamflow/product-capture
+      PRODUCT_CAPTURE_ENABLED: ${PRODUCT_CAPTURE_ENABLED:-true}
+      PRODUCT_CAPTURE_LLM_API_KEY: ${PRODUCT_CAPTURE_LLM_API_KEY:-}
+      PRODUCT_CAPTURE_LLM_BASE_URL: ${PRODUCT_CAPTURE_LLM_BASE_URL:-https://api.openai.com/v1}
+      PRODUCT_CAPTURE_LLM_MODEL: ${PRODUCT_CAPTURE_LLM_MODEL:-gpt-4o-mini}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      APP_CACHE_REDIS_ENABLED: ${APP_CACHE_REDIS_ENABLED:-false}
+    volumes:
+      - product-import-data:/var/lib/sugamflow/product-import
+      - product-capture-data:/var/lib/sugamflow/product-capture
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8081:8081"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  stock-service:
+    build:
+      context: .
+      dockerfile: stock-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/stock-service:${STOCK_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8082
+      STOCK_DB_URL: ${STOCK_DB_URL:-jdbc:postgresql://host.docker.internal:5432/stockdb}
+      STOCK_DB_USERNAME: ${STOCK_DB_USERNAME:-stockdb}
+      STOCK_DB_PASSWORD: ${STOCK_DB_PASSWORD:-stockdb}
+      SPRING_DATASOURCE_URL: ${STOCK_DB_URL:-jdbc:postgresql://host.docker.internal:5432/stockdb}
+      SPRING_DATASOURCE_USERNAME: ${STOCK_DB_USERNAME:-stockdb}
+      SPRING_DATASOURCE_PASSWORD: ${STOCK_DB_PASSWORD:-stockdb}
+      SERVICES_PRODUCT_BASE_URL: http://product-service:8081
+      # Local freemode: point at gst-mock-service. Prod: https://api.sandbox.co.in + real keys.
+      GST_VERIFICATION_ENABLED: ${GST_VERIFICATION_ENABLED:-false}
+      GST_VERIFICATION_BASE_URL: ${GST_VERIFICATION_BASE_URL:-http://gst-mock-service:8099}
+      GST_VERIFICATION_API_KEY: ${GST_VERIFICATION_API_KEY:-mock-dev-key}
+      GST_VERIFICATION_API_SECRET: ${GST_VERIFICATION_API_SECRET:-mock-dev-secret}
+      LEDGER_INTEGRATION_ENABLED: ${LEDGER_INTEGRATION_ENABLED:-true}
+      LEDGER_INTEGRATION_BASE_URL: ${LEDGER_INTEGRATION_BASE_URL:-http://ledger-service:8094}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8082:8082"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      gst-mock-service:
+        condition: service_started
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/order-service:${ORDER_IMAGE_TAG:-${IMAGE_TAG:-1.0.0}}
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8083
+      ORDER_DB_URL: ${ORDER_DB_URL:-jdbc:postgresql://host.docker.internal:5432/orderdb}
+      ORDER_DB_USERNAME: ${ORDER_DB_USERNAME:-orderdb}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:-orderdb}
+      SPRING_DATASOURCE_URL: ${ORDER_DB_URL:-jdbc:postgresql://host.docker.internal:5432/orderdb}
+      SPRING_DATASOURCE_USERNAME: ${ORDER_DB_USERNAME:-orderdb}
+      SPRING_DATASOURCE_PASSWORD: ${ORDER_DB_PASSWORD:-orderdb}
+      SERVICES_PRODUCT_BASE_URL: http://product-service:8081
+      SERVICES_USER_BASE_URL: http://user-service:8084
+      SERVICES_STOCK_BASE_URL: http://stock-service:8082
+      SERVICES_SHOP_BASE_URL: http://shop-service:8080
+      SERVICES_QUEUE_BASE_URL: http://queue-management-service:8098
+      GST_INTEGRATION_ENABLED: ${GST_INTEGRATION_ENABLED:-true}
+      GST_INTEGRATION_BASE_URL: ${GST_INTEGRATION_BASE_URL:-http://gst-service:8091}
+      LEDGER_INTEGRATION_ENABLED: ${LEDGER_INTEGRATION_ENABLED:-true}
+      LEDGER_INTEGRATION_BASE_URL: ${LEDGER_INTEGRATION_BASE_URL:-http://ledger-service:8094}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8083:8083"
+    healthcheck:
+      # TCP probe — JRE image has no curl/wget.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8083'"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 180s
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/user-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8084
+      USER_DB_URL: ${USER_DB_URL:-jdbc:postgresql://host.docker.internal:5432/userdb}
+      USER_DB_USERNAME: ${USER_DB_USERNAME:-userdb}
+      USER_DB_PASSWORD: ${USER_DB_PASSWORD:-userdb}
+      SPRING_DATASOURCE_URL: ${USER_DB_URL:-jdbc:postgresql://host.docker.internal:5432/userdb}
+      SPRING_DATASOURCE_USERNAME: ${USER_DB_USERNAME:-userdb}
+      SPRING_DATASOURCE_PASSWORD: ${USER_DB_PASSWORD:-userdb}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8084:8084"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/auth-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8085
+      AUTH_DB_URL: ${AUTH_DB_URL:-jdbc:postgresql://host.docker.internal:5432/authdb}
+      AUTH_DB_USERNAME: ${AUTH_DB_USERNAME:-authdb}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:-authdb}
+      SPRING_DATASOURCE_URL: ${AUTH_DB_URL:-jdbc:postgresql://host.docker.internal:5432/authdb}
+      SPRING_DATASOURCE_USERNAME: ${AUTH_DB_USERNAME:-authdb}
+      SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD:-authdb}
+      SECURITY_JWT_SECRET: "${SECURITY_JWT_SECRET:-01234567890123456789012345678901}"
+      SECURITY_INVITE_INTERNAL_KEY: "${SECURITY_INVITE_INTERNAL_KEY:-dev-invite-key-change-in-production}"
+      AUTH_INTEGRATION_FRONTEND_BASE_URL: "${AUTH_INTEGRATION_FRONTEND_BASE_URL:-http://localhost:4200}"
+      AUTH_INTEGRATION_NOTIFICATION_BASE_URL: http://notification-service:8087
+      AUTH_INTEGRATION_SHOP_BASE_URL: http://shop-service:8080
+      # Cold shop JVM can exceed 4s; raises TimeLimiter used by ShopLoginGuard.
+      RESILIENCE4J_TIMELIMITER_CONFIGS_DEFAULT_TIMEOUTDURATION: "${AUTH_SHOP_STATUS_TIMEOUT:-8s}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8085:8085"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/payment-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8086
+      PAYMENT_DB_URL: ${PAYMENT_DB_URL:-jdbc:postgresql://host.docker.internal:5432/paymentdb}
+      PAYMENT_DB_USERNAME: ${PAYMENT_DB_USERNAME:-paymentdb}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:-paymentdb}
+      SPRING_DATASOURCE_URL: ${PAYMENT_DB_URL:-jdbc:postgresql://host.docker.internal:5432/paymentdb}
+      SPRING_DATASOURCE_USERNAME: ${PAYMENT_DB_USERNAME:-paymentdb}
+      SPRING_DATASOURCE_PASSWORD: ${PAYMENT_DB_PASSWORD:-paymentdb}
+      SERVICES_BILLING_BASE_URL: http://user-service:8084
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8086:8086"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/notification-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8087
+      NOTIFICATION_DB_URL: ${NOTIFICATION_DB_URL:-jdbc:postgresql://host.docker.internal:5432/notificationdb}
+      NOTIFICATION_DB_USERNAME: ${NOTIFICATION_DB_USERNAME:-notificationdb}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-notificationdb}
+      SPRING_DATASOURCE_URL: ${NOTIFICATION_DB_URL:-jdbc:postgresql://host.docker.internal:5432/notificationdb}
+      SPRING_DATASOURCE_USERNAME: ${NOTIFICATION_DB_USERNAME:-notificationdb}
+      SPRING_DATASOURCE_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-notificationdb}
+      SPRING_MAIL_HOST: "${SPRING_MAIL_HOST:-mailhog}"
+      SPRING_MAIL_PORT: "${SPRING_MAIL_PORT:-1025}"
+      SPRING_MAIL_USERNAME: "${SPRING_MAIL_USERNAME:-}"
+      SPRING_MAIL_PASSWORD: "${SPRING_MAIL_PASSWORD:-}"
+      SPRING_MAIL_SMTP_AUTH: "${SPRING_MAIL_SMTP_AUTH:-false}"
+      SPRING_MAIL_SMTP_STARTTLS_ENABLE: "${SPRING_MAIL_SMTP_STARTTLS_ENABLE:-false}"
+      SPRING_MAIL_FROM: "${SPRING_MAIL_FROM:-${SPRING_MAIL_USERNAME:-}}"
+      # School ERP channels — default stub locally; set twilio/msg91 for live phone delivery
+      NOTIFICATION_SMS_PROVIDER: "${NOTIFICATION_SMS_PROVIDER:-stub}"
+      NOTIFICATION_SMS_HTTP_URL: "${NOTIFICATION_SMS_HTTP_URL:-}"
+      NOTIFICATION_SMS_API_KEY: "${NOTIFICATION_SMS_API_KEY:-}"
+      NOTIFICATION_WHATSAPP_PROVIDER: "${NOTIFICATION_WHATSAPP_PROVIDER:-stub}"
+      NOTIFICATION_WHATSAPP_HTTP_URL: "${NOTIFICATION_WHATSAPP_HTTP_URL:-}"
+      NOTIFICATION_WHATSAPP_API_KEY: "${NOTIFICATION_WHATSAPP_API_KEY:-}"
+      NOTIFICATION_DEFAULT_COUNTRY_CODE: "${NOTIFICATION_DEFAULT_COUNTRY_CODE:-91}"
+      TWILIO_ACCOUNT_SID: "${TWILIO_ACCOUNT_SID:-}"
+      TWILIO_AUTH_TOKEN: "${TWILIO_AUTH_TOKEN:-}"
+      TWILIO_SMS_FROM: "${TWILIO_SMS_FROM:-}"
+      TWILIO_WHATSAPP_FROM: "${TWILIO_WHATSAPP_FROM:-}"
+      MSG91_AUTH_KEY: "${MSG91_AUTH_KEY:-}"
+      MSG91_SENDER: "${MSG91_SENDER:-}"
+      MSG91_ROUTE: "${MSG91_ROUTE:-4}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8087:8087"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+
+  reporting-service:
+    build:
+      context: .
+      dockerfile: reporting-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/reporting-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8088
+      REPORTING_DB_URL: ${REPORTING_DB_URL:-jdbc:postgresql://host.docker.internal:5432/reportingdb}
+      REPORTING_DB_USERNAME: ${REPORTING_DB_USERNAME:-reportingdb}
+      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:-reportingdb}
+      SPRING_DATASOURCE_URL: ${REPORTING_DB_URL:-jdbc:postgresql://host.docker.internal:5432/reportingdb}
+      SPRING_DATASOURCE_USERNAME: ${REPORTING_DB_USERNAME:-reportingdb}
+      SPRING_DATASOURCE_PASSWORD: ${REPORTING_DB_PASSWORD:-reportingdb}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8088:8088"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  account-service:
+    build:
+      context: .
+      dockerfile: account-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/account-service:${IMAGE_TAG:-1.0.0}
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8089
+      ACCOUNT_DB_URL: ${ACCOUNT_DB_URL:-jdbc:postgresql://host.docker.internal:5432/accountdb}
+      ACCOUNT_DB_USERNAME: ${ACCOUNT_DB_USERNAME:-accountdb}
+      ACCOUNT_DB_PASSWORD: ${ACCOUNT_DB_PASSWORD:-accountdb}
+      SPRING_DATASOURCE_URL: ${ACCOUNT_DB_URL:-jdbc:postgresql://host.docker.internal:5432/accountdb}
+      SPRING_DATASOURCE_USERNAME: ${ACCOUNT_DB_USERNAME:-accountdb}
+      SPRING_DATASOURCE_PASSWORD: ${ACCOUNT_DB_PASSWORD:-accountdb}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      ACCOUNT_INTEGRATION_AUTH_BASE_URL: http://auth-service:8085
+      ACCOUNT_INTEGRATION_AUTH_INVITE_INTERNAL_KEY: "${SECURITY_INVITE_INTERNAL_KEY:-dev-invite-key-change-in-production}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8089:8089"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+
+  gst-service:
+    build:
+      context: .
+      dockerfile: gst-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/gst-service:${IMAGE_TAG:-1.0.0}
+    pull_policy: build
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8091
+      GST_DB_URL: ${GST_DB_URL:-jdbc:postgresql://host.docker.internal:5432/gstdb}
+      GST_DB_USERNAME: ${GST_DB_USERNAME:-gstdb}
+      GST_DB_PASSWORD: ${GST_DB_PASSWORD:-gstdb}
+      SPRING_DATASOURCE_URL: ${GST_DB_URL:-jdbc:postgresql://host.docker.internal:5432/gstdb}
+      SPRING_DATASOURCE_USERNAME: ${GST_DB_USERNAME:-gstdb}
+      SPRING_DATASOURCE_PASSWORD: ${GST_DB_PASSWORD:-gstdb}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${GST_DB_HIKARI_MAX_POOL:-10}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${GST_DB_HIKARI_MIN_IDLE:-2}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      APP_CACHE_REDIS_ENABLED: ${APP_CACHE_REDIS_ENABLED:-true}
+      GST_VERIFICATION_ENABLED: ${GST_VERIFICATION_ENABLED:-true}
+      GST_VERIFICATION_BASE_URL: ${GST_VERIFICATION_BASE_URL:-http://gst-mock-service:8099}
+      GST_VERIFICATION_API_KEY: ${GST_VERIFICATION_API_KEY:-mock-dev-key}
+      GST_VERIFICATION_API_SECRET: ${GST_VERIFICATION_API_SECRET:-mock-dev-secret}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${GST_SERVICE_HOST_PORT:-8091}:8091"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      gst-mock-service:
+        condition: service_started
+
+  # Free Sandbox-compatible GSTIN mock (local/dev only). Not for production EC2.
+  gst-mock-service:
+    build:
+      context: .
+      dockerfile: gst-mock-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/gst-mock-service:${IMAGE_TAG:-1.0.0}
+    pull_policy: build
+    environment:
+      SERVER_PORT: 8099
+      GST_MOCK_DATASET_SIZE: ${GST_MOCK_DATASET_SIZE:-10000}
+      GST_MOCK_SEED: ${GST_MOCK_SEED:-20260719}
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Asia/Kolkata -Xms64m -Xmx192m}
+    ports:
+      - "${GST_MOCK_SERVICE_HOST_PORT:-8099}:8099"
+
+  ledger-service:
+    build:
+      context: .
+      dockerfile: ledger-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/ledger-service:${IMAGE_TAG:-1.0.0}
+    pull_policy: build
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8094
+      LEDGER_DB_URL: ${LEDGER_DB_URL:-jdbc:postgresql://host.docker.internal:5432/ledgerdb}
+      LEDGER_DB_USERNAME: ${LEDGER_DB_USERNAME:-ledgerdb}
+      LEDGER_DB_PASSWORD: ${LEDGER_DB_PASSWORD:-ledgerdb}
+      SPRING_DATASOURCE_URL: ${LEDGER_DB_URL:-jdbc:postgresql://host.docker.internal:5432/ledgerdb}
+      SPRING_DATASOURCE_USERNAME: ${LEDGER_DB_USERNAME:-ledgerdb}
+      SPRING_DATASOURCE_PASSWORD: ${LEDGER_DB_PASSWORD:-ledgerdb}
+      # Flyway needs >2 connections; common-env DB_POOL_MAX_SIZE=2 deadlocks startup.
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${LEDGER_DB_HIKARI_MAX_POOL:-8}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${LEDGER_DB_HIKARI_MIN_IDLE:-1}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${LEDGER_SERVICE_HOST_PORT:-8094}:8094"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  fieldforce-service:
+    build:
+      context: .
+      dockerfile: fieldforce-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/fieldforce-service:${IMAGE_TAG:-1.0.0}
+    # Image is usually not on Docker Hub until you push it - build locally instead of pulling.
+    pull_policy: build
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8090
+      FIELDFORCE_DB_URL: ${FIELDFORCE_DB_URL:-jdbc:postgresql://host.docker.internal:5432/fieldforcedb}
+      FIELDFORCE_DB_USERNAME: ${FIELDFORCE_DB_USERNAME:-fieldforcedb}
+      FIELDFORCE_DB_PASSWORD: ${FIELDFORCE_DB_PASSWORD:-fieldforcedb}
+      SPRING_DATASOURCE_URL: ${FIELDFORCE_DB_URL:-jdbc:postgresql://host.docker.internal:5432/fieldforcedb}
+      SPRING_DATASOURCE_USERNAME: ${FIELDFORCE_DB_USERNAME:-fieldforcedb}
+      SPRING_DATASOURCE_PASSWORD: ${FIELDFORCE_DB_PASSWORD:-fieldforcedb}
+      # Flyway + Hibernate startup can exceed DB_POOL_MAX_SIZE=2 (pool starvation ? timeouts).
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${FIELDFORCE_DB_HIKARI_MAX_POOL:-10}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${FIELDFORCE_DB_HIKARI_MIN_IDLE:-2}
+      FIELDFORCE_SHOP_INTEGRATION_ENABLED: ${FIELDFORCE_SHOP_INTEGRATION_ENABLED:-true}
+      FIELDFORCE_SHOP_INTEGRATION_BASE_URL: ${FIELDFORCE_SHOP_INTEGRATION_BASE_URL:-http://shop-service:8080}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${FIELDFORCE_SERVICE_HOST_PORT:-8090}:8090"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  # CRM (Phase 1) — prefer host jar :8095 until image is published; override GATEWAY_CRM_URI.
+  crm-service:
+    profiles: ["crm"]
+    build:
+      context: ./crm-service
+      dockerfile: Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/crm-service:${IMAGE_TAG:-1.0.0}
+    pull_policy: build
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8095
+      SPRING_PROFILES_ACTIVE: local
+      CRM_DB_URL: ${CRM_DB_URL:-jdbc:postgresql://host.docker.internal:5432/crmdb}
+      CRM_DB_USERNAME: ${CRM_DB_USERNAME:-crmdb}
+      CRM_DB_PASSWORD: ${CRM_DB_PASSWORD:-crmdb}
+      SPRING_DATASOURCE_URL: ${CRM_DB_URL:-jdbc:postgresql://host.docker.internal:5432/crmdb}
+      SPRING_DATASOURCE_USERNAME: ${CRM_DB_USERNAME:-crmdb}
+      SPRING_DATASOURCE_PASSWORD: ${CRM_DB_PASSWORD:-crmdb}
+      CRM_ENTITLEMENT_ENABLED: ${CRM_ENTITLEMENT_ENABLED:-false}
+      CRM_SUBSCRIPTION_BASE_URL: ${CRM_SUBSCRIPTION_BASE_URL:-http://host.docker.internal:8182}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${CRM_SERVICE_HOST_PORT:-8095}:8095"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  # Sugam Jyotish (Phase 0) — profile "jyotish"; override GATEWAY_JYOTISH_URI.
+  jyotish-service:
+    profiles: ["jyotish"]
+    build:
+      context: ./sugamflow-astro/jyotish-service
+      dockerfile: Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/jyotish-service:${IMAGE_TAG:-1.0.0}
+    pull_policy: build
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8097
+      SPRING_PROFILES_ACTIVE: local
+      JYOTISH_DB_URL: ${JYOTISH_DB_URL:-jdbc:postgresql://host.docker.internal:5432/jyotishdb}
+      JYOTISH_DB_USERNAME: ${JYOTISH_DB_USERNAME:-jyotishdb}
+      JYOTISH_DB_PASSWORD: ${JYOTISH_DB_PASSWORD:-jyotishdb}
+      SPRING_DATASOURCE_URL: ${JYOTISH_DB_URL:-jdbc:postgresql://host.docker.internal:5432/jyotishdb}
+      SPRING_DATASOURCE_USERNAME: ${JYOTISH_DB_USERNAME:-jyotishdb}
+      SPRING_DATASOURCE_PASSWORD: ${JYOTISH_DB_PASSWORD:-jyotishdb}
+      JYOTISH_ENTITLEMENT_ENABLED: ${JYOTISH_ENTITLEMENT_ENABLED:-false}
+      JYOTISH_SUBSCRIPTION_BASE_URL: ${JYOTISH_SUBSCRIPTION_BASE_URL:-http://host.docker.internal:8182}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${JYOTISH_SERVICE_HOST_PORT:-8097}:8097"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  # Optional Omnichannel Marketplace — does not start unless profile "marketplace" is enabled.
+  marketplace-integration-service:
+    profiles: ["marketplace"]
+    build:
+      context: ./marketplace-integration-service
+      dockerfile: Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/marketplace-integration-service:${IMAGE_TAG:-1.0.0}
+    pull_policy: build
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8096
+      SPRING_PROFILES_ACTIVE: local
+      MARKETPLACE_DB_URL: ${MARKETPLACE_DB_URL:-jdbc:postgresql://host.docker.internal:5432/marketplacedb}
+      MARKETPLACE_DB_USERNAME: ${MARKETPLACE_DB_USERNAME:-marketplacedb}
+      MARKETPLACE_DB_PASSWORD: ${MARKETPLACE_DB_PASSWORD:-marketplacedb}
+      SPRING_DATASOURCE_URL: ${MARKETPLACE_DB_URL:-jdbc:postgresql://host.docker.internal:5432/marketplacedb}
+      SPRING_DATASOURCE_USERNAME: ${MARKETPLACE_DB_USERNAME:-marketplacedb}
+      SPRING_DATASOURCE_PASSWORD: ${MARKETPLACE_DB_PASSWORD:-marketplacedb}
+      MARKETPLACE_ENTITLEMENT_ENABLED: ${MARKETPLACE_ENTITLEMENT_ENABLED:-false}
+      MARKETPLACE_STOCK_BASE_URL: ${MARKETPLACE_STOCK_BASE_URL:-http://host.docker.internal:8082}
+      MARKETPLACE_SHOP_BASE_URL: ${MARKETPLACE_SHOP_BASE_URL:-http://host.docker.internal:8080}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${MARKETPLACE_SERVICE_HOST_PORT:-8096}:8096"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  doctor-service:
+    build:
+      context: .
+      dockerfile: doctor-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/doctor-service:${IMAGE_TAG:-1.0.0}
+    pull_policy: build
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8092
+      DOCTOR_DB_URL: ${DOCTOR_DB_URL:-jdbc:postgresql://host.docker.internal:5432/doctordb}
+      DOCTOR_DB_USERNAME: ${DOCTOR_DB_USERNAME:-doctordb}
+      DOCTOR_DB_PASSWORD: ${DOCTOR_DB_PASSWORD:-doctordb}
+      SPRING_DATASOURCE_URL: ${DOCTOR_DB_URL:-jdbc:postgresql://host.docker.internal:5432/doctordb}
+      SPRING_DATASOURCE_USERNAME: ${DOCTOR_DB_USERNAME:-doctordb}
+      SPRING_DATASOURCE_PASSWORD: ${DOCTOR_DB_PASSWORD:-doctordb}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${DOCTOR_DB_HIKARI_MAX_POOL:-10}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${DOCTOR_DB_HIKARI_MIN_IDLE:-2}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${DOCTOR_SERVICE_HOST_PORT:-8092}:8092"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  appointment-service:
+    build:
+      context: ./appointment-service
+      dockerfile: Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/appointment-service:${IMAGE_TAG:-1.0.0}
+    pull_policy: build
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8093
+      APPOINTMENT_DB_URL: ${APPOINTMENT_DB_URL:-jdbc:postgresql://host.docker.internal:5432/appointmentdb}
+      APPOINTMENT_DB_USERNAME: ${APPOINTMENT_DB_USERNAME:-appointmentdb}
+      APPOINTMENT_DB_PASSWORD: ${APPOINTMENT_DB_PASSWORD:-appointmentdb}
+      SPRING_DATASOURCE_URL: ${APPOINTMENT_DB_URL:-jdbc:postgresql://host.docker.internal:5432/appointmentdb}
+      SPRING_DATASOURCE_USERNAME: ${APPOINTMENT_DB_USERNAME:-appointmentdb}
+      SPRING_DATASOURCE_PASSWORD: ${APPOINTMENT_DB_PASSWORD:-appointmentdb}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${APPOINTMENT_DB_HIKARI_MAX_POOL:-10}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${APPOINTMENT_DB_HIKARI_MIN_IDLE:-2}
+      SERVICES_QUEUE_BASE_URL: ${SERVICES_QUEUE_BASE_URL:-http://queue-management-service:8098}
+      SERVICES_ORDER_BASE_URL: ${SERVICES_ORDER_BASE_URL:-http://order-service:8083}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${APPOINTMENT_SERVICE_HOST_PORT:-8093}:8093"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  queue-management-service:
+    build:
+      context: .
+      dockerfile: queue-management-service/Dockerfile
+    image: ${IMAGE_PREFIX:-sumanthakur30}/queue-management-service:${IMAGE_TAG:-1.0.0}
+    pull_policy: build
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8098
+      QUEUE_DB_URL: ${QUEUE_DB_URL:-jdbc:postgresql://host.docker.internal:5432/queuedb}
+      QUEUE_DB_USERNAME: ${QUEUE_DB_USERNAME:-queuedb}
+      QUEUE_DB_PASSWORD: ${QUEUE_DB_PASSWORD:-queuedb}
+      SPRING_DATASOURCE_URL: ${QUEUE_DB_URL:-jdbc:postgresql://host.docker.internal:5432/queuedb}
+      SPRING_DATASOURCE_USERNAME: ${QUEUE_DB_USERNAME:-queuedb}
+      SPRING_DATASOURCE_PASSWORD: ${QUEUE_DB_PASSWORD:-queuedb}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${QUEUE_DB_HIKARI_MAX_POOL:-10}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${QUEUE_DB_HIKARI_MIN_IDLE:-2}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${QUEUE_SERVICE_HOST_PORT:-8098}:8098"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  prometheus:
+    profiles: ["observability"]
+    image: prom/prometheus:v2.55.1
+    ports:
+      - "${PROMETHEUS_HOST_PORT:-19090}:9090"
+    volumes:
+      - ./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      gateway-service:
+        condition: service_started
+
+  grafana:
+    profiles: ["observability"]
+    image: grafana/grafana:11.4.0
+    ports:
+      - "${GRAFANA_HOST_PORT:-13000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+      - loki
+
+  loki:
+    profiles: ["observability"]
+    image: grafana/loki:3.3.2
+    ports:
+      - "${LOKI_HOST_PORT:-13100}:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./infra/observability/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+
+  promtail:
+    profiles: ["observability"]
+    image: grafana/promtail:3.3.2
+    volumes:
+      - ./infra/observability/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+volumes:
+  product-import-data:
+  product-capture-data:
+  shop-support-data:
+  shop-branding-data:
+  loki-data:

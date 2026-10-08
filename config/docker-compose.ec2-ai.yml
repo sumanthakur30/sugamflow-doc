@@ -1,0 +1,51 @@
+# EC2 overlay — internal Ollama + ai-service. Do not publish 11434.
+#   docker compose -f docker-compose.ec2-rds.yml -f docker-compose.ec2-ai.yml --profile ai up -d
+#
+# Set GATEWAY_AI_URI=http://ai-service:8102 in .env.production after this is up.
+# Create RDS database aidb (or use H2 only for smoke — not for PHI).
+
+services:
+  ollama:
+    profiles: ["ai"]
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_models:/root/.ollama
+    mem_limit: ${OLLAMA_MEM_LIMIT:-4g}
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+  ai-service:
+    profiles: ["ai"]
+    image: ${IMAGE_PREFIX:-sumanthakur30}/ai-service:${AI_IMAGE_TAG:-1.0.0}
+    restart: unless-stopped
+    mem_limit: ${AI_SERVICE_MEM_LIMIT:-512m}
+    environment:
+      SERVER_PORT: 8102
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      SPRING_CLOUD_CONFIG_URI: http://config-service:8888
+      SECURITY_JWT_SECRET: "${SECURITY_JWT_SECRET}"
+      SECURITY_INTERNAL_API_KEY: "${SECURITY_INTERNAL_API_KEY:-${SECURITY_INVITE_INTERNAL_KEY}}"
+      AI_DB_URL: ${AI_DB_URL}
+      AI_DB_USERNAME: ${AI_DB_USERNAME}
+      AI_DB_PASSWORD: ${AI_DB_PASSWORD}
+      SPRING_DATASOURCE_URL: ${AI_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${AI_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${AI_DB_PASSWORD}
+      AI_PROVIDER: OLLAMA
+      AI_MODEL: ${AI_MODEL:-qwen3:8b}
+      OLLAMA_BASE_URL: http://ollama:11434
+      AI_ALLOW_EXTERNAL_PROVIDER: "false"
+      PRODUCT_SERVICE_BASE_URL: http://product-service:8081
+      ORDER_SERVICE_BASE_URL: http://order-service:8083
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+volumes:
+  ollama_models:

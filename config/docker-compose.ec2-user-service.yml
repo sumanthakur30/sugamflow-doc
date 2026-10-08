@@ -1,0 +1,39 @@
+# Overlay for EC2 when your main docker-compose.yml only defines shop-service (or a subset).
+#
+# Prerequisites:
+#   1. Start your main stack once so the default network exists, e.g.:
+#        sudo docker compose up -d shop-service
+#   2. Confirm network name (Compose project name: sumanthakur30 → "sumanthakur30_default"):
+#        sudo docker network ls | grep sumanthakur30
+#   3. If the network name differs, set SUGAMFLOW_DOCKER_NETWORK or change the default below.
+#   4. Put SPRING_DATASOURCE_* (and optional SPRING_PROFILES_ACTIVE) in .env next to this file.
+#
+# Run:
+#   sudo docker compose -f docker-compose.ec2-user-service.yml --env-file .env up -d
+#
+# Image override (e.g. Docker Hub):
+#   export USER_SERVICE_IMAGE=sumanthakur30/user-service:1.0.0
+#   sudo docker compose -f docker-compose.ec2-user-service.yml --env-file .env up -d
+
+name: sumanthakur30
+
+services:
+  user-service:
+    image: ${USER_SERVICE_IMAGE:-sumanthakur30/user-service:1.0.0}
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SERVER_PORT: "8084"
+      # Main compose on EC2 often has no Eureka; disable client so the app still starts.
+      EUREKA_CLIENT_ENABLED: "false"
+    ports:
+      - "8084:8084"
+    networks:
+      - sugamflow_ext
+
+networks:
+  sugamflow_ext:
+    name: ${SUGAMFLOW_DOCKER_NETWORK:-sumanthakur30_default}
+    external: true

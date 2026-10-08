@@ -1,0 +1,19 @@
+# Reduce Docker build context size (repo root is context for all service images).
+.git/
+.github/
+**/.git/
+**/target/
+**/node_modules/
+shop-management-ui/
+sugamflow-docs/
+docs/
+load-tests/
+kit/
+medical-shop-sql/
+shop-management-kit/
+tools/
+*.md
+.env
+.env.*
+!.env.example
+!.env.production.example

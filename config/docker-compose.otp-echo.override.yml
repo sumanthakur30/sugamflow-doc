@@ -1,0 +1,4 @@
+﻿services:
+  order-service:
+    environment:
+      LAB_PORTAL_OTP_DEV_ECHO: "true"
