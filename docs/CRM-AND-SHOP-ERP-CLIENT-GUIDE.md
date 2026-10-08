@@ -94,19 +94,18 @@ A quote becomes a shop order only after the lead is a shop customer and quote-to
 
 1. Open CRM and sign in. Shop id is this shop.
 2. Open **Leads**.
-3. **Create lead**
+3. Click **New lead**.
    - Title (required), for example the shop or person name
    - Contact name, company, **phone**, email
-4. Click **Create**. The lead opens on the right. It starts as **New** and **OPEN**.
-5. Click **Edit**. Set **Source** to `CALL`. Click **Save**.  
-   The create form stores source as `WEBSITE` until you edit it.
-6. Make the call on your phone. In **Score / call / meeting**:
+   - Source defaults to **Phone call**. Change it if this lead came from somewhere else.
+4. Click **Create lead**. The lead opens on the right. It starts in the first pipeline stage (GENERIC: **New**) and status **OPEN**.
+5. Make the call on your phone. Open the **Activity** tab:
    - Phone can stay blank if it is already on the lead
    - Duration is in seconds (60 = one minute)
    - Click **Log call**
-7. Type what they said under **Follow-up notes** and click **Save note**.
-8. **Move stage** from **New** to **Contacted**.
-9. If another salesman will visit them, **Assign** the lead to that user.
+6. Type what they said under **Add note** and click **Save note**.
+7. On **Overview**, **Move stage** from **New** to **Contacted**.
+8. If another salesman will visit them, **Assign** the lead to that user.
 
 **Log call** records an outbound connected call. The separate **Call** button appears only when a phone system (CTI) is connected. It is off until that is set up.
 
@@ -124,23 +123,18 @@ This is the path when the salesman visits a buyer to **show and sell this shop�
 
 ### At the visit
 
-1. If they are new, **Create lead** with title, contact, company, and phone.
-2. **Edit** the lead. Set **Source** to `VISIT`. Save.
-3. After the demo, **Log call** (duration of the meeting) and **Save note**:
+1. If they are new, click **New lead** with title, contact, company, and phone. Set **Source** to **Market visit**.
+2. After the demo, open **Activity**, **Log call** (duration of the meeting) and **Save note**:
    - what you showed
    - what they want to buy
    - next date
-4. **Move stage** to **Contacted**, or to **Demo / trial** if the workspace template is RETAIL.
-5. If they are serious, fill **Qualification** (budget, who decides, what they need, when) and save it.
+3. On **Overview**, **Move stage** to **Contacted**, or to **Demo / trial** if the workspace template is RETAIL.
+4. If they are serious, fill **Qualification** (budget, who decides, what they need, when) and save it.
 
 ### When they agree to buy
 
-1. **Convert to CRM**
-   - Account: Create new (their shop or company name, phone, GSTIN if you have it)
-   - Contact: Create new
-   - Tick **Create opportunity** and enter the amount
-   - Tick **Mark lead CONVERTED**
-2. **Convert to ERP** → choose **Shop customer** → **Convert to ERP**.  
+1. **Convert to CRM** opens a four-step wizard: Account, Contact, Opportunity (only if you tick it), then Confirm. Tick **Mark lead CONVERTED** on the last step and click **Convert lead**. This creates the CRM account, contact, and deal. It does not put the person on the shop customer list.
+2. Open the **Shop** tab. **Convert to shop** → choose **Shop customer** → **Convert to ERP**.  
    They now exist on the shop’s customer list. The button does not create the bill by itself.
 3. Open **Quotes**. Add the products and amounts. Send or accept the quote.
 4. Tell the counter the customer name and quote. They bill in the **shop app** (stock and payment). When quote-to-order is on, accepting the quote creates the shop order for them.
