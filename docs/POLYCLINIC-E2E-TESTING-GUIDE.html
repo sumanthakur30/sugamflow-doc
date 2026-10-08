@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SugamFlow — Polyclinic E2E Testing Guide</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.45;
+      color: #1a1a2e;
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 12mm 14mm;
+    }
+    h1 { font-size: 20pt; color: #0d47a1; border-bottom: 3px solid #1976d2; padding-bottom: 8px; margin-top: 0; }
+    h2 { font-size: 13pt; color: #1565c0; margin-top: 22px; page-break-after: avoid; }
+    h3 { font-size: 11pt; color: #37474f; margin-top: 14px; }
+    .meta { color: #546e7a; font-size: 9.5pt; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0 16px; font-size: 9.5pt; }
+    th, td { border: 1px solid #cfd8dc; padding: 6px 8px; text-align: left; vertical-align: top; }
+    th { background: #e3f2fd; font-weight: 600; }
+    tr:nth-child(even) td { background: #fafafa; }
+    code, .mono { font-family: Consolas, monospace; font-size: 9pt; background: #eceff1; padding: 1px 4px; border-radius: 3px; }
+    pre {
+      background: #263238;
+      color: #eceff1;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 8.5pt;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .diagram {
+      margin: 14px 0;
+      padding: 12px;
+      background: #f5f9fc;
+      border: 1px solid #b0bec5;
+      border-radius: 8px;
+      page-break-inside: avoid;
+    }
+    .diagram svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+    .legend { font-size: 9pt; color: #607d8b; margin-top: 6px; }
+    .phase { background: #fff8e1; border-left: 4px solid #ffa000; padding: 8px 12px; margin: 10px 0; }
+    .gap { background: #ffebee; border-left: 4px solid #c62828; padding: 8px 12px; margin: 10px 0; font-size: 9.5pt; }
+    .ok { background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 8px 12px; margin: 10px 0; font-size: 9.5pt; }
+    ul { margin: 6px 0; padding-left: 20px; }
+    li { margin: 4px 0; }
+    .page-break { page-break-before: always; }
+    .toc a { color: #1565c0; text-decoration: none; }
+    .footer { margin-top: 24px; font-size: 8.5pt; color: #78909c; text-align: center; border-top: 1px solid #cfd8dc; padding-top: 10px; }
+  </style>
+</head>
+<body>
+
+<h1>SugamFlow Polyclinic — End-to-End Testing Guide</h1>
+<p class="meta">
+  <strong>Document:</strong> POLYCLINIC-E2E-TESTING-GUIDE &nbsp;|&nbsp;
+  <strong>Shop example:</strong> TRUST-MEDI-01 (Trust Medi Centre) &nbsp;|&nbsp;
+  <strong>Business type:</strong> POLYCLINIC &nbsp;|&nbsp;
+  <strong>Generated:</strong> May 2026
+</p>
+
+<div class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#arch">System architecture</a></li>
+    <li><a href="#journey">Patient journey (target flow)</a></li>
+    <li><a href="#setup">One-time local setup</a></li>
+    <li><a href="#users">Test users and permissions</a></li>
+    <li><a href="#flow">Step-by-step test flow (Phases 0–8)</a></li>
+    <li><a href="#script">30-minute smoke test script</a></li>
+    <li><a href="#urls">URL cheat sheet</a></li>
+    <li><a href="#blockers">Troubleshooting</a></li>
+    <li><a href="#gaps">UI gaps (plan vs today)</a></li>
+  </ol>
+</div>
+
+<h2 id="arch">1. System architecture</h2>
+<p>Local stack: Angular UI on port <code>4200</code>, API Gateway on <code>9090</code>, polyclinic microservices on <code>8092–8098</code>.</p>
+
+<div class="diagram">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" width="700">
+    <defs>
+      <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 Z" fill="#455a64"/>
+      </marker>
+    </defs>
+    <rect x="10" y="20" width="200" height="120" rx="8" fill="#e3f2fd" stroke="#1976d2"/>
+    <text x="110" y="48" text-anchor="middle" font-size="13" font-weight="bold" fill="#0d47a1">Angular UI :4200</text>
+    <text x="110" y="72" text-anchor="middle" font-size="10" fill="#37474f">Reception · Doctor · Pharmacy</text>
+    <text x="110" y="88" text-anchor="middle" font-size="10" fill="#37474f">Staff · Patients · Orders · Stock</text>
+
+    <rect x="260" y="50" width="120" height="60" rx="8" fill="#fff3e0" stroke="#ef6c00"/>
+    <text x="320" y="78" text-anchor="middle" font-size="12" font-weight="bold" fill="#e65100">Gateway :9090</text>
+
+    <rect x="420" y="10" width="140" height="50" rx="6" fill="#f3e5f5" stroke="#7b1fa2"/>
+    <text x="490" y="38" text-anchor="middle" font-size="10" fill="#4a148c">doctor :8092</text>
+    <rect x="420" y="70" width="140" height="50" rx="6" fill="#f3e5f5" stroke="#7b1fa2"/>
+    <text x="490" y="98" text-anchor="middle" font-size="10" fill="#4a148c">appointment :8093</text>
+    <rect x="420" y="130" width="140" height="50" rx="6" fill="#f3e5f5" stroke="#7b1fa2"/>
+    <text x="490" y="158" text-anchor="middle" font-size="10" fill="#4a148c">queue :8098</text>
+    <rect x="420" y="190" width="140" height="50" rx="6" fill="#e8f5e9" stroke="#388e3c"/>
+    <text x="490" y="218" text-anchor="middle" font-size="10" fill="#1b5e20">order (sales-admin)</text>
+
+    <rect x="580" y="10" width="130" height="230" rx="8" fill="#eceff1" stroke="#607d8b"/>
+    <text x="645" y="36" text-anchor="middle" font-size="11" font-weight="bold" fill="#37474f">Core services</text>
+    <text x="645" y="58" text-anchor="middle" font-size="9" fill="#546e7a">auth · account</text>
+    <text x="645" y="74" text-anchor="middle" font-size="9" fill="#546e7a">user (customers)</text>
+    <text x="645" y="90" text-anchor="middle" font-size="9" fill="#546e7a">product · stock</text>
+    <text x="645" y="106" text-anchor="middle" font-size="9" fill="#546e7a">shop · payment</text>
+    <text x="645" y="122" text-anchor="middle" font-size="9" fill="#546e7a">gst · reporting</text>
+
+    <line x1="210" y1="80" x2="258" y2="80" stroke="#455a64" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="380" y1="80" x2="418" y2="35" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <line x1="380" y1="80" x2="418" y2="95" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <line x1="380" y1="80" x2="418" y2="155" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <line x1="380" y1="80" x2="418" y2="215" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <line x1="560" y1="125" x2="578" y2="125" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+    <rect x="10" y="200" width="680" height="100" rx="8" fill="#fafafa" stroke="#90a4ae"/>
+    <text x="350" y="228" text-anchor="middle" font-size="11" font-weight="bold" fill="#37474f">PostgreSQL databases</text>
+    <text x="350" y="252" text-anchor="middle" font-size="9" fill="#546e7a">shopdb · accountdb · userdb · productdb · stockdb · orderdb</text>
+    <text x="350" y="272" text-anchor="middle" font-size="9" fill="#546e7a">doctordb · appointmentdb · queuedb (polyclinic — run create-polyclinic scripts)</text>
+  </svg>
+  <p class="legend">UI talks to all APIs through the gateway. Clinical flows use doctor, appointment, queue, and order-service sales-admin.</p>
+</div>
+
+<h2 id="journey" class="page-break">2. Patient journey — target flow diagram</h2>
+<p>Ideal polyclinic journey (from <code>docs/diagrams/06-polyclinic-patient-journey.mmd</code>). Items in <span style="color:#c62828">red</span> are partial or API-only today.</p>
+
+<div class="diagram">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 520" width="660">
+    <defs>
+      <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#37474f"/></marker>
+    </defs>
+    <rect x="260" y="8" width="160" height="36" rx="18" fill="#1976d2"/><text x="340" y="31" text-anchor="middle" fill="#fff" font-size="11" font-weight="bold">Patient arrives</text>
+
+    <polygon points="340,58 300,88 380,88" fill="#fff9c4" stroke="#f9a825"/>
+    <text x="340" y="82" text-anchor="middle" font-size="10">Has appointment?</text>
+
+    <rect x="80" y="100" width="150" height="32" rx="6" fill="#e8f5e9" stroke="#43a047"/><text x="155" y="121" text-anchor="middle" font-size="9">Yes: Verify at reception</text>
+    <rect x="450" y="100" width="150" height="32" rx="6" fill="#e3f2fd" stroke="#1e88e5"/><text x="525" y="121" text-anchor="middle" font-size="9">No: Walk-in registration</text>
+
+    <rect x="240" y="150" width="200" height="36" rx="6" fill="#fff3e0" stroke="#fb8c00"/><text x="340" y="173" text-anchor="middle" font-size="10" font-weight="bold">Token / queue entry</text>
+
+    <rect x="220" y="200" width="240" height="32" rx="6" fill="#ffebee" stroke="#e53935"/><text x="340" y="221" text-anchor="middle" font-size="9" fill="#b71c1c">Nurse vitals (planned — not in UI)</text>
+
+    <rect x="220" y="248" width="240" height="32" rx="6" fill="#f3e5f5" stroke="#8e24aa"/><text x="340" y="269" text-anchor="middle" font-size="10">Waiting queue</text>
+
+    <rect x="200" y="296" width="280" height="36" rx="6" fill="#e8eaf6" stroke="#3949ab"/><text x="340" y="319" text-anchor="middle" font-size="10" font-weight="bold">Doctor: Begin consultation</text>
+
+    <rect x="60" y="352" width="120" height="40" rx="6" fill="#e8f5e9" stroke="#2e7d32"/><text x="120" y="372" text-anchor="middle" font-size="9">E-Prescription</text><text x="120" y="384" text-anchor="middle" font-size="8">/pharmacy/add</text>
+    <rect x="200" y="352" width="120" height="40" rx="6" fill="#ffebee" stroke="#c62828"/><text x="260" y="372" text-anchor="middle" font-size="9">Lab orders</text><text x="260" y="384" text-anchor="middle" font-size="8">API only</text>
+    <rect x="340" y="352" width="120" height="40" rx="6" fill="#e8f5e9" stroke="#2e7d32"/><text x="400" y="372" text-anchor="middle" font-size="9">Clinical notes</text><text x="400" y="384" text-anchor="middle" font-size="8">/doctor/dashboard</text>
+    <rect x="480" y="352" width="120" height="40" rx="6" fill="#fff8e1" stroke="#f9a825"/><text x="540" y="372" text-anchor="middle" font-size="9">Follow-up</text><text x="540" y="384" text-anchor="middle" font-size="8">planned</text>
+
+    <rect x="60" y="412" width="140" height="36" rx="6" fill="#e3f2fd" stroke="#1565c0"/><text x="130" y="435" text-anchor="middle" font-size="9">Pharmacy queue → Bill</text>
+    <rect x="240" y="412" width="140" height="36" rx="6" fill="#ffebee" stroke="#c62828"/><text x="310" y="435" text-anchor="middle" font-size="9">Lab → Results (API)</text>
+    <rect x="420" y="412" width="140" height="36" rx="6" fill="#e8f5e9" stroke="#2e7d32"/><text x="490" y="435" text-anchor="middle" font-size="9">Payment / Orders</text>
+
+    <rect x="220" y="468" width="240" height="36" rx="18" fill="#0d47a1"/><text x="340" y="491" text-anchor="middle" fill="#fff" font-size="10" font-weight="bold">Visit complete · reports</text>
+
+    <line x1="340" y1="44" x2="340" y2="58" stroke="#37474f" marker-end="url(#a2)"/>
+    <line x1="310" y1="88" x2="155" y2="100" stroke="#37474f" marker-end="url(#a2)"/>
+    <line x1="370" y1="88" x2="525" y2="100" stroke="#37474f" marker-end="url(#a2)"/>
+    <line x1="155" y1="132" x2="300" y2="168" stroke="#37474f" marker-end="url(#a2)"/>
+    <line x1="525" y1="132" x2="380" y2="168" stroke="#37474f" marker-end="url(#a2)"/>
+    <line x1="340" y1="186" x2="340" y2="200" stroke="#37474f" marker-end="url(#a2)"/>
+    <line x1="340" y1="232" x2="340" y2="248" stroke="#37474f" marker-end="url(#a2)"/>
+    <line x1="340" y1="280" x2="340" y2="296" stroke="#37474f" marker-end="url(#a2)"/>
+    <line x1="340" y1="332" x2="340" y2="352" stroke="#37474f" marker-end="url(#a2)"/>
+    <line x1="120" y1="392" x2="130" y2="412" stroke="#37474f" marker-end="url(#a2)"/>
+    <line x1="260" y1="392" x2="310" y2="412" stroke="#37474f" marker-end="url(#a2)"/>
+    <line x1="400" y1="392" x2="490" y2="412" stroke="#37474f" marker-end="url(#a2)"/>
+    <line x1="340" y1="448" x2="340" y2="468" stroke="#37474f" marker-end="url(#a2)"/>
+  </svg>
+  <p class="legend">Green = implemented in UI. Red = backend/API or future phase.</p>
+</div>
+
+<h2 id="setup">3. One-time local setup</h2>
+
+<h3>3.1 Start Docker services</h3>
+<pre>cd D:\sugamFlow
+powershell -NoProfile -ExecutionPolicy Bypass -File .\start-local.ps1 -EnvFile .env.local</pre>
+<p>Includes: <code>doctor-service</code> (8092), <code>appointment-service</code> (8093), <code>queue-management-service</code> (8098), gateway (9090), auth, account, user, order, product, stock.</p>
+
+<table>
+  <tr><th>Check</th><th>URL</th></tr>
+  <tr><td>Gateway health</td><td><code>http://127.0.0.1:9090/actuator/health</code></td></tr>
+  <tr><td>Doctor service</td><td><code>http://127.0.0.1:8092/actuator/health</code></td></tr>
+  <tr><td>Appointment service</td><td><code>http://127.0.0.1:8093/actuator/health</code></td></tr>
+  <tr><td>Queue service</td><td><code>http://127.0.0.1:8098/actuator/health</code></td></tr>
+</table>
+
+<h3>3.2 Polyclinic PostgreSQL (first time)</h3>
+<ol>
+  <li><code>infra/postgres/create-polyclinic-01-users-only.sql</code> — roles</li>
+  <li><code>infra/postgres/create-polyclinic-02-create-databases-only.sql</code> — doctordb, appointmentdb, queuedb</li>
+  <li><code>infra/postgres/create-polyclinic-03-grants-only.sql</code> or <code>run-fix-polyclinic-as-postgres.bat</code></li>
+</ol>
+
+<h3>3.3 Trust Medi demo data</h3>
+<pre>psql -U postgres -h 127.0.0.1 -p 15432 -d shopdb -f infra/postgres/patches/update-trust-medi-01-polyclinic-gst.sql
+psql -U postgres -h 127.0.0.1 -p 15432 -d doctordb -f infra/postgres/patches/seed-trust-medi-01-doctors.sql</pre>
+
+<h3>3.4 Start Angular UI</h3>
+<pre>cd D:\sugamFlow\shop-management-ui
+npm start</pre>
+<p>Open <strong>http://localhost:4200</strong> and select outlet <strong>TRUST-MEDI-01</strong>.</p>
+
+<h2 id="users" class="page-break">4. Test users and permissions</h2>
+
+<table>
+  <tr><th>Role</th><th>Login</th><th>Use for</th></tr>
+  <tr><td>Super admin</td><td>Super Admin mode → platform shop, then switch outlet</td><td>Full setup, import products</td></tr>
+  <tr><td>Shop owner</td><td>Shop ID <code>TRUST-MEDI-01</code></td><td>Day-to-day clinic operations</td></tr>
+  <tr><td>Reception staff</td><td>Staff invite → set password</td><td><code>/reception/dashboard</code></td></tr>
+  <tr><td>Doctor staff</td><td>Staff invite + doctor row in doctordb</td><td><code>/doctor/dashboard</code></td></tr>
+  <tr><td>Pharmacist</td><td>Staff with dispense permissions</td><td><code>/pharmacy</code></td></tr>
+</table>
+
+<h3>Staff permissions (Staff → Configure access)</h3>
+<table>
+  <tr><th>Permission</th><th>Enables</th></tr>
+  <tr><td><code>MANAGE_CUSTOMERS</code></td><td>Patients (Customers module)</td></tr>
+  <tr><td><code>MANAGE_STAFF</code></td><td>Invite staff</td></tr>
+  <tr><td><code>MANAGE_APPOINTMENTS</code></td><td>Reception / appointments</td></tr>
+  <tr><td><code>MANAGE_CONSULTATIONS</code></td><td>Doctor consult save</td></tr>
+  <tr><td><code>MANAGE_QUEUE</code></td><td>Queue operations</td></tr>
+  <tr><td><code>MANAGE_ORDERS</code></td><td>Orders, billing, call-next (with queue fix)</td></tr>
+  <tr><td><code>DISPENSE_MEDICINES</code></td><td>Pharmacy / prescriptions</td></tr>
+  <tr><td><code>MANAGE_STOCKS</code></td><td>Inventory</td></tr>
+  <tr><td><code>MANAGE_LAB_ORDERS</code> / <code>MANAGE_LAB_RESULTS</code></td><td>Lab APIs (no UI page yet)</td></tr>
+</table>
+<div class="ok"><strong>Important:</strong> Re-login after changing staff permissions so the JWT includes new claims.</div>
+
+<h2 id="flow">5. Step-by-step test flow</h2>
+
+<div class="phase"><strong>Phase 0 — Clinic master data</strong></div>
+<table>
+  <tr><th>Step</th><th>Where</th><th>Action</th></tr>
+  <tr><td>0.1</td><td>Login</td><td>Super admin or owner → outlet <code>TRUST-MEDI-01</code></td></tr>
+  <tr><td>0.2</td><td>Header tabs</td><td>Expect: Pharmacy, OPD &amp; billing, Store &amp; inventory, Staff — not retail Products tab (POLYCLINIC)</td></tr>
+  <tr><td>0.3</td><td>Sidebar import</td><td>Add medicines to catalog (import products / demo SQL)</td></tr>
+  <tr><td>0.4</td><td>/stocks</td><td>Receive stock for prescription line items</td></tr>
+</table>
+
+<div class="phase"><strong>Phase 1 — Patient registration</strong></div>
+<table>
+  <tr><th>Step</th><th>URL</th><th>Action</th></tr>
+  <tr><td>1.1</td><td><code>/users</code></td><td>Add customer: name, 10-digit phone, email, address</td></tr>
+  <tr><td>1.2</td><td><code>/pharmacy/add</code></td><td>Or quick-add patient via search when creating Rx</td></tr>
+  <tr><td>1.3</td><td><code>/reception/dashboard</code></td><td>Select patient from dropdown for walk-in</td></tr>
+</table>
+
+<div class="phase"><strong>Phase 2 — Doctor registration (two parts)</strong></div>
+<p><strong>Part A — Staff account:</strong> <code>/staff</code> → Invite → set password link → Configure access (<code>MANAGE_CONSULTATIONS</code>, etc.).</p>
+<p><strong>Part B — Doctor profile (OPD dropdown):</strong> No full UI yet. Run seed SQL or POST <code>/api/v1/doctors</code> with <code>accountId</code> linked to staff user.</p>
+<table>
+  <tr><th>Step</th><th>Verify</th></tr>
+  <tr><td>2.4</td><td><code>/doctor/dashboard</code> — doctor dropdown shows <em>Dr. Trust Medi</em> (after seed)</td></tr>
+</table>
+
+<div class="phase"><strong>Phase 3 — Reception (walk-in + token)</strong></div>
+<table>
+  <tr><th>Step</th><th>URL</th><th>Action</th></tr>
+  <tr><td>3.1</td><td><code>/reception/dashboard</code></td><td>Patient + doctor + chief complaint</td></tr>
+  <tr><td>3.2</td><td></td><td>Click <strong>Register walk-in + token</strong></td></tr>
+  <tr><td>3.3</td><td></td><td>Confirm row in <strong>Today's appointments</strong></td></tr>
+</table>
+
+<div class="phase page-break"><strong>Phase 4 — Doctor OPD</strong></div>
+<table>
+  <tr><th>Step</th><th>URL</th><th>Action</th></tr>
+  <tr><td>4.1</td><td><code>/doctor/dashboard</code></td><td>Select doctor → Refresh</td></tr>
+  <tr><td>4.2</td><td></td><td>Queue shows WAITING / COMPLETED</td></tr>
+  <tr><td>4.3</td><td></td><td><strong>Begin consultation</strong> on next patient</td></tr>
+  <tr><td>4.4</td><td></td><td>Chief complaint, diagnosis, notes → <strong>Save consultation</strong></td></tr>
+  <tr><td>4.5</td><td></td><td><strong>Complete visit</strong></td></tr>
+</table>
+
+<div class="phase"><strong>Phase 5 — Prescription (e-Rx)</strong></div>
+<table>
+  <tr><th>Step</th><th>URL</th><th>Action</th></tr>
+  <tr><td>5.1</td><td><code>/pharmacy/add</code></td><td>Select patient (search / quick-add)</td></tr>
+  <tr><td>5.2</td><td></td><td>Doctor name, add line items (product, qty, dosage)</td></tr>
+  <tr><td>5.3</td><td></td><td><strong>Save prescription</strong> → Prescription queue</td></tr>
+  <tr><td>5.4</td><td>Queue</td><td><strong>Create Bill</strong> → order created, Rx DISPENSED</td></tr>
+</table>
+
+<div class="phase"><strong>Phase 6 — Pharmacy / medical shop billing</strong></div>
+<p>For POLYCLINIC, the <strong>Pharmacy</strong> module is the dispensary; general billing uses <strong>Orders</strong>.</p>
+<table>
+  <tr><th>Step</th><th>URL</th><th>Action</th></tr>
+  <tr><td>6.1</td><td>Prescription queue</td><td>Create Bill from Rx</td></tr>
+  <tr><td>6.2</td><td><code>/orders</code></td><td>Verify bill, payment, GST if enabled on shop</td></tr>
+  <tr><td>6.3</td><td><code>/orders/add</code></td><td>OTC walk-in sale</td></tr>
+  <tr><td>6.4</td><td><code>/stocks</code></td><td>Verify stock deduction</td></tr>
+</table>
+
+<div class="phase"><strong>Phase 7 — Lab (API / dashboard)</strong></div>
+<div class="gap">No dedicated Lab UI in Angular. Use sales-admin API or owner dashboard counts.</div>
+<pre>POST http://127.0.0.1:9090/api/v1/sales-admin/lab-orders
+Headers: Authorization, X-Tenant-Id, X-Shop-Id, X-Auth-Role
+Body: { "branchId": 1, "customerId": &lt;patientId&gt;, "consultationId": &lt;id&gt;,
+  "doctorName": "Dr. Trust Medi", "status": "ORDERED",
+  "items": [{ "testCode": "CBC", "testName": "Complete Blood Count" }] }</pre>
+
+<div class="phase"><strong>Phase 8 — Reports</strong></div>
+<table>
+  <tr><th>Step</th><th>URL</th><th>Action</th></tr>
+  <tr><td>8.1</td><td><code>/owner-dashboard</code></td><td>Consultations, prescriptions, lab pending counts</td></tr>
+</table>
+
+<h2 id="script">6. 30-minute smoke test (one patient)</h2>
+<ol>
+  <li>Add patient <em>Test Patient OPD</em> at <code>/users</code>.</li>
+  <li>Ensure doctor seeded or invited + doctordb profile.</li>
+  <li>Reception: walk-in + token.</li>
+  <li>Doctor: begin consult → save → complete visit.</li>
+  <li>Pharmacy: prescription → save → Create Bill.</li>
+  <li>Orders: verify bill; Stock: verify quantity.</li>
+  <li>(Optional) Postman: lab order for same customer/consultation.</li>
+  <li>Owner dashboard: refresh stats.</li>
+</ol>
+
+<h2 id="urls">7. URL cheat sheet</h2>
+<table>
+  <tr><th>Screen</th><th>Path</th></tr>
+  <tr><td>Login</td><td><code>/login</code></td></tr>
+  <tr><td>Owner home</td><td><code>/owner-dashboard</code></td></tr>
+  <tr><td>Reception</td><td><code>/reception/dashboard</code></td></tr>
+  <tr><td>Doctor OPD</td><td><code>/doctor/dashboard</code></td></tr>
+  <tr><td>Pharmacy / Rx</td><td><code>/pharmacy</code>, <code>/pharmacy/add</code></td></tr>
+  <tr><td>Patients</td><td><code>/users</code></td></tr>
+  <tr><td>Staff</td><td><code>/staff</code></td></tr>
+  <tr><td>Orders</td><td><code>/orders</code>, <code>/orders/add</code></td></tr>
+  <tr><td>Stock</td><td><code>/stocks</code></td></tr>
+</table>
+
+<h2 id="blockers" class="page-break">8. Troubleshooting</h2>
+<table>
+  <tr><th>Symptom</th><th>Fix</th></tr>
+  <tr><td>Doctor dropdown empty</td><td>Run <code>seed-trust-medi-01-doctors.sql</code>; verify doctordb exists</td></tr>
+  <tr><td>404 on doctor/appointment/queue</td><td>Restart <code>ng serve</code>; check services on 8092–8098</td></tr>
+  <tr><td>Staff invite auth timeout</td><td>Restart account-service + auth-service</td></tr>
+  <tr><td>Begin consultation forbidden</td><td>Rebuild queue-management-service; grant MANAGE_CONSULTATIONS or MANAGE_ORDERS; re-login</td></tr>
+  <tr><td>No products for Rx lines</td><td>Import medicines — Products tab hidden for POLYCLINIC</td></tr>
+  <tr><td>Prescription save JSON error</td><td>Restart order-service (EntityGraph fix on items)</td></tr>
+  <tr><td>Invalid login after startup</td><td>Wait ~1 min for auth/gateway/Postgres</td></tr>
+</table>
+
+<h2 id="gaps">9. UI gaps (plan vs today)</h2>
+<ul>
+  <li>Full doctor registration UI (departments, schedules, fees)</li>
+  <li>Lab worklist UI</li>
+  <li>EMR (vitals, allergies, timeline on doctor screen)</li>
+  <li>Appointment booking calendar (walk-in only on reception today)</li>
+  <li>Nurse vitals screen</li>
+</ul>
+<p>See <code>docs/POLYCLINIC-MANAGEMENT-IMPLEMENTATION-PLAN.md</code> and <code>docs/diagrams/06-polyclinic-patient-journey.mmd</code>.</p>
+
+<div class="footer">
+  SugamFlow · Polyclinic E2E Testing Guide · TRUST-MEDI-01 · Generated from docs/POLYCLINIC-E2E-TESTING-GUIDE.html
+</div>
+
+</body>
+</html>

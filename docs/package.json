@@ -1,0 +1,27 @@
+{
+  "name": "sugamflow-docs-pdf",
+  "private": true,
+  "description": "Generates AWS VPC deployment plan PDF",
+  "scripts": {
+    "diagrams": "node render-diagrams.cjs",
+    "pdf": "node generate-aws-vpc-pdf.cjs",
+    "pdf:all": "node render-diagrams.cjs && node generate-aws-vpc-pdf.cjs",
+    "pdf:fieldforce": "node generate-fieldforce-guide-pdf.cjs",
+    "pdf:procurement": "node generate-procurement-walkthrough-pdf.cjs",
+    "pdf:automobile": "node generate-automobile-guide-pdf.cjs",
+    "diagrams:polyclinic": "node render-polyclinic-diagrams.cjs",
+    "pdf:polyclinic": "node generate-polyclinic-plan-pdf.cjs",
+    "pdf:polyclinic:all": "node render-polyclinic-diagrams.cjs && node generate-polyclinic-plan-pdf.cjs",
+    "pdf:platform": "node generate-platform-overview-pdf.cjs",
+    "briefs:generate": "node client-briefs/generate-business-type-briefs.cjs",
+    "pdf:business-briefs": "node generate-business-type-brief-pdf.cjs",
+    "pdf:business-briefs:all": "node client-briefs/generate-business-type-briefs.cjs && node generate-business-type-brief-pdf.cjs",
+    "pdf:generic-business": "node client-briefs/generate-business-type-briefs.cjs && node generate-business-type-brief-pdf.cjs"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.14.0",
+    "marked": "^4.3.0",
+    "pdfkit": "^0.15.0",
+    "puppeteer": "^24.42.0"
+  }
+}

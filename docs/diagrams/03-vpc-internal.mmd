@@ -1,0 +1,20 @@
+%% VPC internal — east-west (sugamflow.com API path)
+flowchart TB
+  ALB[ALB public subnets]
+
+  subgraph app[Private app subnets]
+    GW[gateway-service :9090]
+    EU[discovery :8761]
+    CFG[config :8888]
+    SVC[Domain services :8080-8089]
+  end
+
+  subgraph data[Private DB subnets]
+    RDS[(RDS SQL :1433)]
+  end
+
+  ALB --> GW
+  GW --> SVC
+  SVC --> EU
+  SVC --> CFG
+  SVC --> RDS

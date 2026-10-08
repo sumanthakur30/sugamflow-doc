@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Instrument Console — Training Video (SugamFlow)</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #121a2b;
+      --ink: #e8eef8;
+      --muted: #93a4bf;
+      --accent: #3b82f6;
+      --ok: #22c55e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #243049;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { margin: 0; font-size: 18px; }
+    header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      background: #1e293b;
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.primary { background: var(--accent); }
+    button:hover { filter: brightness(1.1); }
+    .stage {
+      max-width: 1100px;
+      margin: 18px auto;
+      padding: 0 16px 40px;
+    }
+    .frame {
+      background: var(--card);
+      border: 1px solid #243049;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,.35);
+    }
+    .frame img {
+      display: block;
+      width: 100%;
+      background: #000;
+      min-height: 280px;
+      object-fit: contain;
+    }
+    .caption {
+      padding: 14px 16px 16px;
+      border-top: 1px solid #243049;
+    }
+    .caption .step {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .caption h2 { margin: 4px 0 6px; font-size: 20px; }
+    .caption p { margin: 0; color: var(--muted); line-height: 1.45; }
+    .progress {
+      height: 4px;
+      background: #243049;
+      margin-top: 12px;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress > span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: var(--ok);
+      transition: width .2s linear;
+    }
+    .cheat {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: #0f172a;
+      border: 1px dashed #334155;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .cheat code {
+      color: #fde68a;
+      background: #1f2937;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .dots { display: flex; gap: 6px; margin-top: 10px; }
+    .dots i {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #334155; display: inline-block;
+    }
+    .dots i.on { background: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>SugamFlow · Instrument Console Training</h1>
+      <p>Auto-playing visual guide (open this file in a browser). Use Play / Pause / Next.</p>
+    </div>
+    <div class="controls">
+      <button id="prevBtn" type="button">Prev</button>
+      <button id="playBtn" class="primary" type="button">Pause</button>
+      <button id="nextBtn" type="button">Next</button>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div class="frame">
+      <img id="slideImg" alt="Training slide" />
+      <div class="caption">
+        <div class="step" id="slideStep">Step 1</div>
+        <h2 id="slideTitle">Title</h2>
+        <p id="slideBody">Body</p>
+        <div class="progress"><span id="bar"></span></div>
+        <div class="dots" id="dots"></div>
+      </div>
+    </div>
+
+    <div class="cheat">
+      <strong style="color:#e8eef8">Live training data already created for PATH-DEMO-01</strong><br />
+      Login: Shop <code>PATH-DEMO-01</code> · User <code>demo</code> · Password <code>Demo@2026</code><br />
+      Instrument: <code>BIO1</code><br />
+      Sample barcode: <code>TRAIN-BIO1-20260726101552</code><br />
+      Order: <code>136</code> · Patient: Rajesh Kumar Mehta<br />
+      Paste import example:<br />
+      <code>BARCODE=TRAIN-BIO1-20260726101552</code><br />
+      <code>GLU=118</code><br />
+      Result: Recent messages shows <code>PROCESSED</code>, and Reports lists
+      <em>“Imported from analyzer BIO1”</em> for order 136.
+    </div>
+  </div>
+
+  <script>
+    const slides = [
+      {
+        img: "01-console.png",
+        step: "Step 1 · What this page is",
+        title: "Instrument console = machine translator",
+        body: "Left side registers the analyzer (BIO1) and maps channel GLU → Glucose. Right side imports results for a sample barcode. This does not book patients or print the final PDF — it only fills values into a report draft."
+      },
+      {
+        img: "02-import-filled.png",
+        step: "Step 2 · Manual import (no real machine needed)",
+        title: "Paste barcode + values, then Import results",
+        body: "Put Instrument code BIO1. Paste BARCODE=TRAIN-BIO1-20260726101552 and GLU=118. Click the green Import results button. This simulates what a biochemistry analyzer would send."
+      },
+      {
+        img: "03-after-import.png",
+        step: "Step 3 · Check Recent messages",
+        title: "Success looks like PROCESSED",
+        body: "Recent messages should show status PROCESSED with your barcode. If you see FAILED, the barcode usually does not match a collected sample, or the channel is not mapped."
+      },
+      {
+        img: "04-reports.png",
+        step: "Step 4 · Verify on Reports",
+        title: "Imported values appear on Lab reports",
+        body: "Open Path lab → Reports. Order 136 (Rajesh Kumar Mehta) shows summary “Imported from analyzer BIO1”. Next: review values → mark bill paid → Sign & release PDF."
+      }
+    ];
+
+    let i = 0;
+    let playing = true;
+    let started = Date.now();
+    const DURATION = 5500;
+
+    const img = document.getElementById("slideImg");
+    const step = document.getElementById("slideStep");
+    const title = document.getElementById("slideTitle");
+    const body = document.getElementById("slideBody");
+    const bar = document.getElementById("bar");
+    const dots = document.getElementById("dots");
+    const playBtn = document.getElementById("playBtn");
+
+    slides.forEach((_, idx) => {
+      const d = document.createElement("i");
+      if (idx === 0) d.classList.add("on");
+      dots.appendChild(d);
+    });
+
+    function render() {
+      const s = slides[i];
+      img.src = s.img;
+      step.textContent = s.step;
+      title.textContent = s.title;
+      body.textContent = s.body;
+      [...dots.children].forEach((d, idx) => d.classList.toggle("on", idx === i));
+      started = Date.now();
+      bar.style.width = "0%";
+    }
+
+    function next() {
+      i = (i + 1) % slides.length;
+      render();
+    }
+    function prev() {
+      i = (i - 1 + slides.length) % slides.length;
+      render();
+    }
+
+    document.getElementById("nextBtn").onclick = next;
+    document.getElementById("prevBtn").onclick = prev;
+    playBtn.onclick = () => {
+      playing = !playing;
+      playBtn.textContent = playing ? "Pause" : "Play";
+      started = Date.now();
+    };
+
+    setInterval(() => {
+      if (!playing) return;
+      const elapsed = Date.now() - started;
+      const pct = Math.min(100, (elapsed / DURATION) * 100);
+      bar.style.width = pct + "%";
+      if (elapsed >= DURATION) next();
+    }, 100);
+
+    render();
+  </script>
+</body>
+</html>

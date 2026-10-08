@@ -1,0 +1,6 @@
+Product Name,Salt Composition,Product Code / SKU,Barcode,Category,Brand,HSN Code,GST %,Purchase Price,Selling Price,MRP,Current Stock,Unit Type,Batch Number,Expiry Date,Manufacturer,Minimum Stock Alert,Product Status,Schedule Type
+Paracetamol 500mg Tablet,Paracetamol 500mg,TMEDI-IMP-001,8901001001001,Analgesic,Generic,30049099,12,25,30,35,200,strip,BATCH-PARA-01,2027-06-30,Sample Pharma,20,ACTIVE,H
+Cetirizine 10mg Tablet,Cetirizine 10mg,TMEDI-IMP-002,8901001001002,Antihistamine,Generic,30049099,12,18,22,28,150,strip,BATCH-CET-01,2027-03-31,Sample Pharma,15,ACTIVE,H
+Amoxicillin 500mg Capsule,Amoxicillin 500mg,TMEDI-IMP-003,8901001001003,Antibiotic,Generic,30041090,12,45,55,65,80,strip,BATCH-AMX-01,2026-12-31,Sample Pharma,10,ACTIVE,H1
+Omeprazole 20mg Capsule,Omeprazole 20mg,TMEDI-IMP-004,8901001001004,Gastro,Generic,30049099,12,35,42,50,120,strip,BATCH-OME-01,2027-01-31,Sample Pharma,15,ACTIVE,H
+ORS Powder (Oral Rehydration),ORS sachet,TMEDI-IMP-005,8901001001005,General,Generic,30049099,5,12,15,18,300,pcs,BATCH-ORS-01,2028-12-31,Sample Pharma,30,ACTIVE,

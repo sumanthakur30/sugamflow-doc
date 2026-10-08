@@ -1,0 +1,101 @@
+Product Name,Salt Composition,Product Code / SKU,Barcode,Category,Brand,HSN Code,GST %,Purchase Price,Selling Price,MRP,Current Stock,Unit Type,Batch Number,Expiry Date,Manufacturer,Minimum Stock Alert,Product Status,Schedule Type
+Paracetamol 500mg Tablet,Paracetamol 500mg,INRF-001,,Analgesic,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Paracetamol 650mg Tablet,Paracetamol 650mg,INRF-002,,Analgesic,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Ibuprofen 400mg Tablet,Ibuprofen 400mg,INRF-003,,Analgesic,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Aceclofenac 100mg Tablet,Aceclofenac 100mg,INRF-004,,Analgesic,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Diclofenac 50mg Tablet,Diclofenac 50mg,INRF-005,,Analgesic,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Naproxen 500mg Tablet,Naproxen 500mg,INRF-006,,Analgesic,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Aspirin 75mg Tablet,Aspirin 75mg,INRF-007,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Aspirin 150mg Tablet,Aspirin 150mg,INRF-008,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Tramadol 50mg Capsule,Tramadol 50mg,INRF-009,,Analgesic,Generic,30049099,12,,1,,0,capsule,,,,,ACTIVE,H
+Nimesulide 100mg Tablet,Nimesulide 100mg,INRF-010,,Analgesic,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Amoxicillin 500mg Capsule,Amoxicillin 500mg,INRF-011,,Antibiotic,Generic,30041090,12,,1,,0,capsule,,,,,ACTIVE,H
+Amoxicillin 250mg Tablet,Amoxicillin 250mg,INRF-012,,Antibiotic,Generic,30041090,12,,1,,0,tablet,,,,,ACTIVE,H
+Amoxicillin Clavulanate 625mg Tablet,Amoxicillin 500mg + Clavulanic acid 125mg,INRF-013,,Antibiotic,Generic,30041090,12,,1,,0,tablet,,,,,ACTIVE,H
+Azithromycin 500mg Tablet,Azithromycin 500mg,INRF-014,,Antibiotic,Generic,30042019,12,,1,,0,tablet,,,,,ACTIVE,H
+Azithromycin 250mg Tablet,Azithromycin 250mg,INRF-015,,Antibiotic,Generic,30042019,12,,1,,0,tablet,,,,,ACTIVE,H
+Cefixime 200mg Tablet,Cefixime 200mg,INRF-016,,Antibiotic,Generic,30042090,12,,1,,0,tablet,,,,,ACTIVE,H
+Cefpodoxime 200mg Tablet,Cefpodoxime 200mg,INRF-017,,Antibiotic,Generic,30042090,12,,1,,0,tablet,,,,,ACTIVE,H
+Ciprofloxacin 500mg Tablet,Ciprofloxacin 500mg,INRF-018,,Antibiotic,Generic,30042090,12,,1,,0,tablet,,,,,ACTIVE,H
+Levofloxacin 500mg Tablet,Levofloxacin 500mg,INRF-019,,Antibiotic,Generic,30042090,12,,1,,0,tablet,,,,,ACTIVE,H
+Doxycycline 100mg Capsule,Doxycycline 100mg,INRF-020,,Antibiotic,Generic,30042090,12,,1,,0,capsule,,,,,ACTIVE,H
+Metronidazole 400mg Tablet,Metronidazole 400mg,INRF-021,,Antibiotic,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Ofloxacin 200mg Tablet,Ofloxacin 200mg,INRF-022,,Antibiotic,Generic,30042090,12,,1,,0,tablet,,,,,ACTIVE,H
+Ofloxacin Ornidazole Tablet,Ofloxacin 200mg + Ornidazole 500mg,INRF-023,,Antibiotic,Generic,30042090,12,,1,,0,tablet,,,,,ACTIVE,H
+Clarithromycin 500mg Tablet,Clarithromycin 500mg,INRF-024,,Antibiotic,Generic,30042090,12,,1,,0,tablet,,,,,ACTIVE,H
+Cephalexin 500mg Capsule,Cephalexin 500mg,INRF-025,,Antibiotic,Generic,30042090,12,,1,,0,capsule,,,,,ACTIVE,H
+Cetirizine 10mg Tablet,Cetirizine 10mg,INRF-026,,Antihistamine,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Levocetirizine 5mg Tablet,Levocetirizine 5mg,INRF-027,,Antihistamine,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Montelukast 10mg Tablet,Montelukast 10mg,INRF-028,,Respiratory,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Fexofenadine 120mg Tablet,Fexofenadine 120mg,INRF-029,,Antihistamine,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Chlorpheniramine 4mg Tablet,Chlorpheniramine 4mg,INRF-030,,Antihistamine,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Hydroxyzine 10mg Tablet,Hydroxyzine 10mg,INRF-031,,Antihistamine,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Pantoprazole 40mg Tablet,Pantoprazole 40mg,INRF-032,,Gastro,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Omeprazole 20mg Capsule,Omeprazole 20mg,INRF-033,,Gastro,Generic,30049099,12,,1,,0,capsule,,,,,ACTIVE,OTC
+Rabeprazole 20mg Tablet,Rabeprazole 20mg,INRF-034,,Gastro,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Esomeprazole 40mg Tablet,Esomeprazole 40mg,INRF-035,,Gastro,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Domperidone 10mg Tablet,Domperidone 10mg,INRF-036,,Gastro,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Ondansetron 4mg Tablet,Ondansetron 4mg,INRF-037,,Gastro,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+ORS Powder Sachet,Oral rehydration salts,INRF-038,,General,Generic,30049099,5,,1,,0,sachet,,,,,ACTIVE,OTC
+Lactulose Solution 200ml,Lactulose solution,INRF-039,,Gastro,Generic,30049099,12,,1,,0,bottle,,,,,ACTIVE,H
+Sucralfate 1g Tablet,Sucralfate 1g,INRF-040,,Gastro,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Metformin 500mg Tablet,Metformin 500mg,INRF-041,,Diabetes,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Metformin 850mg Tablet,Metformin 850mg,INRF-042,,Diabetes,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Glimepiride 2mg Tablet,Glimepiride 2mg,INRF-043,,Diabetes,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Glimepiride 1mg Tablet,Glimepiride 1mg,INRF-044,,Diabetes,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Sitagliptin 100mg Tablet,Sitagliptin 100mg,INRF-045,,Diabetes,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Vildagliptin 50mg Tablet,Vildagliptin 50mg,INRF-046,,Diabetes,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Gliclazide 80mg Tablet,Gliclazide 80mg,INRF-047,,Diabetes,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Insulin Glargine 100 IU/ml Injection,Insulin glargine,INRF-048,,Diabetes,Generic,30043100,5,,1,,0,injection,,,,,ACTIVE,H
+Telmisartan 40mg Tablet,Telmisartan 40mg,INRF-049,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Telmisartan 80mg Tablet,Telmisartan 80mg,INRF-050,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Losartan 50mg Tablet,Losartan 50mg,INRF-051,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Amlodipine 5mg Tablet,Amlodipine 5mg,INRF-052,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Amlodipine 10mg Tablet,Amlodipine 10mg,INRF-053,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Atorvastatin 10mg Tablet,Atorvastatin 10mg,INRF-054,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Atorvastatin 20mg Tablet,Atorvastatin 20mg,INRF-055,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Rosuvastatin 10mg Tablet,Rosuvastatin 10mg,INRF-056,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Clopidogrel 75mg Tablet,Clopidogrel 75mg,INRF-057,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Metoprolol 25mg Tablet,Metoprolol 25mg,INRF-058,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Metoprolol 50mg Tablet,Metoprolol 50mg,INRF-059,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Enalapril 5mg Tablet,Enalapril 5mg,INRF-060,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Furosemide 40mg Tablet,Furosemide 40mg,INRF-061,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Spironolactone 25mg Tablet,Spironolactone 25mg,INRF-062,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Isosorbide Mononitrate 30mg Tablet,Isosorbide mononitrate 30mg,INRF-063,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Salbutamol 100mcg Inhaler,Salbutamol 100mcg,INRF-064,,Respiratory,Generic,30049099,12,,1,,0,inhaler,,,,,ACTIVE,H
+Levosalbutamol Syrup 100ml,Levosalbutamol syrup,INRF-065,,Respiratory,Generic,30049099,12,,1,,0,syrup,,,,,ACTIVE,H
+Ambroxol 30mg Tablet,Ambroxol 30mg,INRF-066,,Respiratory,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Dextromethorphan Cough Syrup 100ml,Dextromethorphan syrup,INRF-067,,Respiratory,Generic,30049099,12,,1,,0,syrup,,,,,ACTIVE,OTC
+Montelukast Levocetirizine Tablet,Montelukast 10mg + Levocetirizine 5mg,INRF-068,,Respiratory,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Budesonide 200mcg Inhaler,Budesonide 200mcg,INRF-069,,Respiratory,Generic,30049099,12,,1,,0,inhaler,,,,,ACTIVE,H
+Levothyroxine 50mcg Tablet,Levothyroxine 50mcg,INRF-070,,Thyroid,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Levothyroxine 100mcg Tablet,Levothyroxine 100mcg,INRF-071,,Thyroid,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Albendazole 400mg Tablet,Albendazole 400mg,INRF-072,,Anthelmintic,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Ivermectin 12mg Tablet,Ivermectin 12mg,INRF-073,,Anthelmintic,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Fluconazole 150mg Tablet,Fluconazole 150mg,INRF-074,,Antifungal,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Clotrimazole Cream 15g,Clotrimazole 1%,INRF-075,,Dermatology,Generic,30049099,12,,1,,0,cream,,,,,ACTIVE,OTC
+Mupirocin Ointment 5g,Mupirocin 2%,INRF-076,,Dermatology,Generic,30049099,12,,1,,0,ointment,,,,,ACTIVE,H
+Betamethasone Cream 15g,Betamethasone 0.1%,INRF-077,,Dermatology,Generic,30049099,12,,1,,0,cream,,,,,ACTIVE,H
+Permethrin 5% Cream,Permethrin 5%,INRF-078,,Dermatology,Generic,30049099,12,,1,,0,cream,,,,,ACTIVE,H
+Ferrous Ascorbate Folic Acid Tablet,Ferrous ascorbate + folic acid,INRF-079,,Supplement,Generic,30045090,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Calcium Carbonate Vitamin D3 Tablet,Calcium carbonate + Vitamin D3,INRF-080,,Supplement,Generic,30045090,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Vitamin B Complex Tablet,Vitamin B complex,INRF-081,,Supplement,Generic,30045090,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Vitamin D3 60000 IU Capsule,Cholecalciferol 60000 IU,INRF-082,,Supplement,Generic,30045090,12,,1,,0,capsule,,,,,ACTIVE,OTC
+Zinc Sulfate 20mg Tablet,Zinc sulfate 20mg,INRF-083,,Supplement,Generic,30045090,12,,1,,0,tablet,,,,,ACTIVE,OTC
+Multivitamin Capsule,Multivitamin,INRF-084,,Supplement,Generic,30045090,12,,1,,0,capsule,,,,,ACTIVE,OTC
+Clonazepam 0.5mg Tablet,Clonazepam 0.5mg,INRF-085,,Psychiatry,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Escitalopram 10mg Tablet,Escitalopram 10mg,INRF-086,,Psychiatry,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Amitriptyline 25mg Tablet,Amitriptyline 25mg,INRF-087,,Psychiatry,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Propranolol 10mg Tablet,Propranolol 10mg,INRF-088,,Cardiac,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Drotaverine 80mg Tablet,Drotaverine 80mg,INRF-089,,Gastro,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Hyoscine Butylbromide 10mg Tablet,Hyoscine butylbromide 10mg,INRF-090,,Gastro,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Mefenamic Acid Dicyclomine Tablet,Mefenamic acid + Dicyclomine,INRF-091,,Analgesic,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Dicyclomine Paracetamol Tablet,Dicyclomine + Paracetamol,INRF-092,,Analgesic,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Prednisolone 5mg Tablet,Prednisolone 5mg,INRF-093,,Steroid,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Dexamethasone 4mg Tablet,Dexamethasone 4mg,INRF-094,,Steroid,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Betamethasone Injection 4mg,Betamethasone 4mg,INRF-095,,Steroid,Generic,30049099,12,,1,,0,injection,,,,,ACTIVE,H
+Phenytoin 100mg Tablet,Phenytoin 100mg,INRF-096,,Neurology,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Levetiracetam 500mg Tablet,Levetiracetam 500mg,INRF-097,,Neurology,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Sodium Valproate 200mg Tablet,Sodium valproate 200mg,INRF-098,,Neurology,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H
+Tamsulosin 0.4mg Capsule,Tamsulosin 0.4mg,INRF-099,,Urology,Generic,30049099,12,,1,,0,capsule,,,,,ACTIVE,H
+Sildenafil 50mg Tablet,Sildenafil 50mg,INRF-100,,Urology,Generic,30049099,12,,1,,0,tablet,,,,,ACTIVE,H

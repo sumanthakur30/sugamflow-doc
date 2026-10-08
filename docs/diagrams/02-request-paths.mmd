@@ -1,0 +1,13 @@
+%% sugamflow.com — hostname roles
+flowchart LR
+  subgraph public[Public hostnames]
+    H1["sugamflow.com / www"]
+    H2[app.sugamflow.com]
+    H3[api.sugamflow.com]
+  end
+
+  H1 --> M1[Static marketing]
+  H2 --> M2[Angular SPA]
+  H3 --> M3[ALB to gateway]
+
+  M2 -.->|HTTPS API| H3

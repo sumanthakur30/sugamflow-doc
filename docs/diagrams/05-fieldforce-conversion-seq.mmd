@@ -1,0 +1,19 @@
+sequenceDiagram
+    participant U as Promoter/Salesman
+    participant UI as Field Force Workspace
+    participant GW as API Gateway
+    participant FF as fieldforce-service
+    participant SH as shop-service
+    participant AU as auth-service
+
+    U->>UI: Complete conversion
+    UI->>GW: POST /leads/{id}/conversion/complete
+    GW->>FF: Forward + X-Tenant-Id
+    FF->>SH: POST /internal/fieldforce/conversions
+    SH->>SH: registerShopFromFieldforceConversion
+    SH->>AU: Create owner invite
+    AU-->>SH: Invite token
+    SH-->>FF: merchantId, shopId, inviteQueued
+    FF->>FF: lead=CONVERTED, commission accrual
+    FF-->>UI: ConversionResponse
+    UI-->>U: Success + shop id + invite status

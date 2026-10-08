@@ -1,0 +1,25 @@
+flowchart TB
+    subgraph FieldUser["Promoter / Salesman — Field Force Workspace"]
+        A[Create business lead] --> B[Log field activities]
+        B --> C{Ready to onboard?}
+        C -->|No| B
+        C -->|Yes| D[Mark KYC verified]
+        D --> E[Save subscription plan]
+        E --> F[Complete conversion]
+    end
+
+    subgraph Backend["fieldforce-service"]
+        A --> L[(business_leads)]
+        B --> ACT[(field_activities)]
+        F --> CONV[(lead_conversions)]
+    end
+
+    subgraph Shop["shop-service"]
+        F --> G[Create shop FF-LEADCODE]
+        G --> H[Owner password invite via auth-service]
+    end
+
+    subgraph Result["Outcome"]
+        H --> I[Lead status = CONVERTED]
+        G --> J[Shop visible in registry PENDING activation]
+    end

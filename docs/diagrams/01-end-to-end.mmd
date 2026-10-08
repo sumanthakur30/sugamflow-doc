@@ -1,0 +1,38 @@
+%% Domain: sugamflow.com — end-to-end traffic
+flowchart TB
+  B[Browser users]
+
+  subgraph dns[Route 53]
+    D1["sugamflow.com / www"]
+    D2[app.sugamflow.com]
+    D3[api.sugamflow.com]
+  end
+
+  subgraph edge[Edge]
+    CF1[CloudFront]
+    CF2[CloudFront]
+    S3A[(S3 landing)]
+    S3B[(S3 Angular)]
+  end
+
+  subgraph vpc[VPC]
+    ALB[Application Load Balancer]
+    GW[gateway-service]
+    subgraph internal[Private subnets]
+      EU[Eureka]
+      CFG[config-service]
+      MS[Microservices]
+    end
+    RDS[(RDS SQL Server)]
+  end
+
+  B --> D1
+  B --> D2
+  B --> D3
+  D1 --> CF1 --> S3A
+  D2 --> CF2 --> S3B
+  D3 --> ALB --> GW
+  GW --> MS
+  MS --> EU
+  MS --> CFG
+  MS --> RDS

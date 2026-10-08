@@ -1,0 +1,25 @@
+erDiagram
+    PATIENT_PROFILE ||--o{ APPOINTMENT : books
+    PATIENT_PROFILE ||--o{ QUEUE_TOKEN : receives
+    PATIENT_PROFILE ||--o{ CONSULTATION : has
+    PATIENT_PROFILE ||--o{ PATIENT_VITALS : has
+    PATIENT_PROFILE ||--o{ PATIENT_ALLERGY : has
+    PATIENT_PROFILE ||--o{ PATIENT_CHRONIC : has
+
+    DOCTOR ||--o{ DOCTOR_SCHEDULE : has
+    DOCTOR ||--o{ DOCTOR_LEAVE : has
+    DOCTOR ||--o{ APPOINTMENT : attends
+    DOCTOR ||--o{ CONSULTATION : performs
+    DOCTOR }o--|| DEPARTMENT : belongs_to
+
+    APPOINTMENT ||--o| QUEUE_TOKEN : generates
+    QUEUE_TOKEN ||--o| CONSULTATION : starts
+    CONSULTATION ||--o| PRESCRIPTION : produces
+    CONSULTATION ||--o{ LAB_ORDER : orders
+    CONSULTATION ||--o{ CONSULTATION_ATTACHMENT : has
+    LAB_ORDER ||--o| LAB_RESULT : produces
+
+    PRESCRIPTION ||--|{ PRESCRIPTION_ITEM : contains
+    PRESCRIPTION }o--o| ORDER : bills_via
+
+    CONSULTATION ||--o{ PATIENT_TIMELINE_EVENT : recorded_in

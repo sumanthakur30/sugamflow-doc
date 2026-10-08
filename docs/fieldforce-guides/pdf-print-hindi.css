@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap');
+
+@page {
+  size: A4;
+  margin: 14mm 16mm;
+}
+
+html {
+  width: 100%;
+}
+
+body {
+  font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Segoe UI', sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.55;
+  color: #1a1a1a;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+@media print {
+  html,
+  body {
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    transform: none !important;
+    zoom: 100% !important;
+  }
+}
+
+h1 {
+  font-size: 16pt;
+  margin-top: 0;
+  border-bottom: 2px solid #0d6efd;
+  padding-bottom: 8px;
+  page-break-after: avoid;
+}
+
+h2 {
+  font-size: 12pt;
+  margin-top: 14pt;
+  color: #0d3b8e;
+  page-break-after: avoid;
+}
+
+h3 {
+  font-size: 11pt;
+  margin-top: 10pt;
+  page-break-after: avoid;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 8.5pt;
+  margin: 8px 0;
+  page-break-inside: avoid;
+}
+
+th,
+td {
+  border: 1px solid #c5ccd6;
+  padding: 5px 7px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: #f0f4fa;
+  font-weight: 600;
+}
+
+pre,
+code {
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 8pt;
+}
+
+pre {
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  page-break-inside: avoid;
+}
+
+.diagram {
+  text-align: center;
+  margin: 12px 0;
+  page-break-inside: avoid;
+}
+
+.diagram img {
+  max-width: 100%;
+  height: auto;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #dee2e6;
+  margin: 12px 0;
+}
+
+ul,
+ol {
+  padding-left: 1.2em;
+}
+
+a {
+  color: #0d3b8e;
+  text-decoration: none;
+}
+
+.doc-meta {
+  font-size: 9pt;
+  color: #555;
+  margin-bottom: 12px;
+}

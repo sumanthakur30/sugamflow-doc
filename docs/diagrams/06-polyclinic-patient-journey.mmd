@@ -1,0 +1,23 @@
+flowchart TD
+    A[Patient arrives] --> B{Has appointment?}
+    B -->|Yes| C[Reception: Verify appointment]
+    B -->|No| D[Walk-in registration]
+    C --> E[Generate token / queue entry]
+    D --> E
+    E --> F[Nurse: Record vitals]
+    F --> G[Waiting queue - TV display]
+    G --> H[Doctor calls next patient]
+    H --> I[Consultation workspace]
+    I --> J{Actions during consult}
+    J --> K[E-Prescription]
+    J --> L[Lab test orders]
+    J --> M[Clinical notes + diagnosis]
+    J --> N[Follow-up date]
+    K --> O[Pharmacy queue]
+    L --> P[Lab queue]
+    O --> Q[Pharmacy billing + GST]
+    P --> R[Sample collection → Results]
+    Q --> S[Payment collection]
+    R --> T[Results on patient timeline]
+    S --> U[Follow-up reminder scheduled]
+    N --> U

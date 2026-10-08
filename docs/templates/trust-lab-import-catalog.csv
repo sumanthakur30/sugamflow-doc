@@ -1,0 +1,123 @@
+﻿Test Name,Test Code / SKU,Category,Sample Type,Processing Time (TAT),Report Type,Service Type,HSN Code,GST %,Selling Price,MRP,Barcode,Product Status
+Complete Blood Count (CBC),TPLAB-LAB-001,Hematology,Blood (EDTA),6 hours,Digital PDF,LAB,999316,18,350,400,,ACTIVE
+ESR (Erythrocyte Sedimentation Rate),TPLAB-LAB-002,Hematology,Blood (EDTA),6 hours,Digital PDF,LAB,999316,18,150,180,,ACTIVE
+Peripheral Blood Smear,TPLAB-LAB-003,Hematology,Blood (EDTA),24 hours,Digital PDF,LAB,999316,18,250,300,,ACTIVE
+Bleeding Time / Clotting Time (BT/CT),TPLAB-LAB-004,Hematology,Blood,4 hours,Digital PDF,LAB,999316,18,200,240,,ACTIVE
+Prothrombin Time / INR (PT/INR),TPLAB-LAB-005,Hematology,Plasma,24 hours,Digital PDF,LAB,999316,18,400,450,,ACTIVE
+Hemoglobin (Hb),TPLAB-LAB-006,Hematology,Blood (EDTA),4 hours,Digital PDF,LAB,999316,18,80,100,,ACTIVE
+Platelet Count,TPLAB-LAB-007,Hematology,Blood (EDTA),4 hours,Digital PDF,LAB,999316,18,120,150,,ACTIVE
+Reticulocyte Count,TPLAB-LAB-008,Hematology,Blood (EDTA),24 hours,Digital PDF,LAB,999316,18,350,420,,ACTIVE
+Blood Group & Rh Typing,TPLAB-LAB-009,Hematology,Blood (EDTA),4 hours,Digital PDF,LAB,999316,18,150,180,,ACTIVE
+D-Dimer,TPLAB-LAB-074,Hematology,Plasma,24 hours,Digital PDF,LAB,999316,18,1500,1750,,ACTIVE
+APTT (Activated Partial Thromboplastin Time),TPLAB-LAB-075,Hematology,Plasma,24 hours,Digital PDF,LAB,999316,18,450,520,,ACTIVE
+Fibrinogen,TPLAB-LAB-076,Hematology,Plasma,48 hours,Digital PDF,LAB,999316,18,800,950,,ACTIVE
+G6PD Screening,TPLAB-LAB-077,Hematology,Blood (EDTA),48 hours,Digital PDF,LAB,999316,18,650,750,,ACTIVE
+Hb Electrophoresis,TPLAB-LAB-078,Hematology,Blood (EDTA),72 hours,Digital PDF,LAB,999316,18,1200,1400,,ACTIVE
+Liver Function Test (LFT),TPLAB-LAB-010,Biochemistry,Serum,24 hours,Digital PDF,LAB,999316,18,550,650,,ACTIVE
+Kidney Function Test (KFT / RFT),TPLAB-LAB-011,Biochemistry,Serum,24 hours,Digital PDF,LAB,999316,18,550,650,,ACTIVE
+Lipid Profile,TPLAB-LAB-012,Biochemistry,Serum,24 hours,Digital PDF,LAB,999316,18,650,750,,ACTIVE
+Blood Sugar Fasting (FBS),TPLAB-LAB-013,Biochemistry,Serum (fasting),4 hours,Digital PDF,LAB,999316,18,100,120,,ACTIVE
+Post Prandial Blood Sugar (PPBS),TPLAB-LAB-014,Biochemistry,Serum,2 hours,Digital PDF,LAB,999316,18,100,120,,ACTIVE
+HbA1c (Glycated Hemoglobin),TPLAB-LAB-015,Biochemistry,Blood (EDTA),24 hours,Digital PDF,LAB,999316,18,450,550,,ACTIVE
+Serum Electrolytes (Na/K/Cl),TPLAB-LAB-016,Biochemistry,Serum,6 hours,Digital PDF,LAB,999316,18,400,480,,ACTIVE
+Serum Amylase,TPLAB-LAB-017,Biochemistry,Serum,24 hours,Digital PDF,LAB,999316,18,450,520,,ACTIVE
+Serum Lipase,TPLAB-LAB-018,Biochemistry,Serum,24 hours,Digital PDF,LAB,999316,18,500,580,,ACTIVE
+LDH (Lactate Dehydrogenase),TPLAB-LAB-019,Biochemistry,Serum,24 hours,Digital PDF,LAB,999316,18,350,420,,ACTIVE
+CRP (C-Reactive Protein),TPLAB-LAB-020,Biochemistry,Serum,24 hours,Digital PDF,LAB,999316,18,500,600,,ACTIVE
+Uric Acid,TPLAB-LAB-021,Biochemistry,Serum,6 hours,Digital PDF,LAB,999316,18,200,250,,ACTIVE
+Serum Phosphorus,TPLAB-LAB-022,Biochemistry,Serum,24 hours,Digital PDF,LAB,999316,18,250,300,,ACTIVE
+Serum Magnesium,TPLAB-LAB-023,Biochemistry,Serum,24 hours,Digital PDF,LAB,999316,18,400,480,,ACTIVE
+Gamma GT (GGTP),TPLAB-LAB-024,Biochemistry,Serum,24 hours,Digital PDF,LAB,999316,18,300,360,,ACTIVE
+SGPT / ALT,TPLAB-LAB-025,Biochemistry,Serum,24 hours,Digital PDF,LAB,999316,18,150,180,,ACTIVE
+SGOT / AST,TPLAB-LAB-026,Biochemistry,Serum,24 hours,Digital PDF,LAB,999316,18,150,180,,ACTIVE
+Bilirubin (Total & Direct),TPLAB-LAB-027,Biochemistry,Serum,6 hours,Digital PDF,LAB,999316,18,250,300,,ACTIVE
+Serum Albumin,TPLAB-LAB-028,Biochemistry,Serum,24 hours,Digital PDF,LAB,999316,18,200,250,,ACTIVE
+Random Blood Sugar (RBS),TPLAB-LAB-029,Biochemistry,Serum,2 hours,Digital PDF,LAB,999316,18,80,100,,ACTIVE
+Serum Calcium,TPLAB-LAB-044,Biochemistry,Serum,6 hours,Digital PDF,LAB,999316,18,200,250,,ACTIVE
+Oral Glucose Tolerance Test (OGTT),TPLAB-LAB-045,Biochemistry,Serum (fasting + PP),6 hours,Digital PDF,LAB,999316,18,350,420,,ACTIVE
+Microalbumin (Urine),TPLAB-LAB-046,Biochemistry,Urine (early morning),24 hours,Digital PDF,LAB,999316,18,450,550,,ACTIVE
+Cystatin C,TPLAB-LAB-047,Biochemistry,Serum,48 hours,Digital PDF,LAB,999316,18,900,1050,,ACTIVE
+Lipoprotein (a),TPLAB-LAB-118,Biochemistry,Serum,48 hours,Digital PDF,LAB,999316,18,1100,1300,,ACTIVE
+Apolipoprotein B,TPLAB-LAB-119,Biochemistry,Serum,48 hours,Digital PDF,LAB,999316,18,900,1050,,ACTIVE
+TSH (Thyroid Stimulating Hormone),TPLAB-LAB-030,Thyroid,Serum,24 hours,Digital PDF,LAB,999316,18,300,360,,ACTIVE
+Free T3 (FT3),TPLAB-LAB-031,Thyroid,Serum,24 hours,Digital PDF,LAB,999316,18,350,420,,ACTIVE
+Free T4 (FT4),TPLAB-LAB-032,Thyroid,Serum,24 hours,Digital PDF,LAB,999316,18,350,420,,ACTIVE
+Thyroid Profile (TSH + FT3 + FT4),TPLAB-LAB-033,Thyroid,Serum,48 hours,Digital PDF,LAB,999316,18,850,999,,ACTIVE
+Anti-TPO Antibody,TPLAB-LAB-034,Thyroid,Serum,48 hours,Digital PDF,LAB,999316,18,700,850,,ACTIVE
+Anti-Thyroglobulin Antibody,TPLAB-LAB-035,Thyroid,Serum,48 hours,Digital PDF,LAB,999316,18,700,850,,ACTIVE
+Vitamin D3 (25-OH),TPLAB-LAB-040,Vitamins,Serum,48 hours,Digital PDF,LAB,999316,18,1200,1400,,ACTIVE
+Vitamin B12,TPLAB-LAB-041,Vitamins,Serum,48 hours,Digital PDF,LAB,999316,18,900,1050,,ACTIVE
+Serum Iron Studies,TPLAB-LAB-042,Vitamins,Serum,48 hours,Digital PDF,LAB,999316,18,900,1050,,ACTIVE
+Serum Ferritin,TPLAB-LAB-043,Vitamins,Serum,48 hours,Digital PDF,LAB,999316,18,900,1050,,ACTIVE
+Folate (Folic Acid),TPLAB-LAB-048,Vitamins,Serum,48 hours,Digital PDF,LAB,999316,18,800,950,,ACTIVE
+Serum Zinc,TPLAB-LAB-049,Vitamins,Serum,48 hours,Digital PDF,LAB,999316,18,900,1050,,ACTIVE
+HBsAg (Hepatitis B surface antigen),TPLAB-LAB-050,Serology,Serum,24 hours,Digital PDF,LAB,999316,18,350,400,,ACTIVE
+Anti-HCV (Hepatitis C antibody),TPLAB-LAB-051,Serology,Serum,24 hours,Digital PDF,LAB,999316,18,400,480,,ACTIVE
+HIV 1 & 2 Antibody (screening),TPLAB-LAB-052,Serology,Serum,24 hours,Confidential PDF,LAB,999316,18,400,480,,ACTIVE
+Dengue NS1 Antigen,TPLAB-LAB-053,Serology,Serum,6 hours,Digital PDF,LAB,999316,18,600,700,,ACTIVE
+Malaria Antigen (Pf/Pv),TPLAB-LAB-054,Serology,Blood,4 hours,Digital PDF,LAB,999316,18,450,520,,ACTIVE
+Widal Test (Typhoid),TPLAB-LAB-055,Serology,Serum,24 hours,Digital PDF,LAB,999316,18,300,360,,ACTIVE
+Typhidot IgM,TPLAB-LAB-056,Serology,Serum,24 hours,Digital PDF,LAB,999316,18,550,650,,ACTIVE
+ASO Titre,TPLAB-LAB-057,Serology,Serum,24 hours,Digital PDF,LAB,999316,18,350,420,,ACTIVE
+Rheumatoid Factor (RA),TPLAB-LAB-058,Serology,Serum,24 hours,Digital PDF,LAB,999316,18,400,480,,ACTIVE
+VDRL / RPR (Syphilis screening),TPLAB-LAB-059,Serology,Serum,24 hours,Confidential PDF,LAB,999316,18,250,300,,ACTIVE
+H. pylori IgG Antibody,TPLAB-LAB-063,Serology,Serum,48 hours,Digital PDF,LAB,999316,18,650,750,,ACTIVE
+Chikungunya IgM,TPLAB-LAB-064,Serology,Serum,24 hours,Digital PDF,LAB,999316,18,600,700,,ACTIVE
+Leptospira IgM,TPLAB-LAB-065,Serology,Serum,48 hours,Digital PDF,LAB,999316,18,650,750,,ACTIVE
+Rubella IgG,TPLAB-LAB-066,Serology,Serum,48 hours,Digital PDF,LAB,999316,18,500,600,,ACTIVE
+Rubella IgM,TPLAB-LAB-067,Serology,Serum,48 hours,Digital PDF,LAB,999316,18,550,650,,ACTIVE
+COVID-19 RT-PCR,TPLAB-LAB-068,Molecular,Nasopharyngeal swab,24 hours,Digital PDF,LAB,999316,18,800,950,,ACTIVE
+COVID-19 Rapid Antigen,TPLAB-LAB-069,Serology,Nasal swab,2 hours,Digital PDF,LAB,999316,18,250,300,,ACTIVE
+Urine Routine & Microscopy,TPLAB-LAB-060,Clinical Path,Urine (mid-stream),4 hours,Digital PDF,LAB,999316,18,120,150,,ACTIVE
+Stool Routine & Microscopy,TPLAB-LAB-062,Clinical Path,Stool,24 hours,Digital PDF,LAB,999316,18,150,180,,ACTIVE
+Semen Analysis,TPLAB-LAB-086,Clinical Path,Semen,48 hours,Digital PDF,LAB,999316,18,600,700,,ACTIVE
+Pap Smear (Cytology),TPLAB-LAB-087,Cytology,Cervical swab,72 hours,Printed + Digital,LAB,999316,18,900,1100,,ACTIVE
+Urine Culture & Sensitivity,TPLAB-LAB-061,Microbiology,Urine,72 hours,Digital PDF,LAB,999316,18,650,750,,ACTIVE
+Blood Culture & Sensitivity,TPLAB-LAB-080,Microbiology,Blood,5 days,Digital PDF,LAB,999316,18,1200,1400,,ACTIVE
+Sputum Culture & Sensitivity,TPLAB-LAB-081,Microbiology,Sputum,5 days,Digital PDF,LAB,999316,18,900,1050,,ACTIVE
+Throat Swab Culture,TPLAB-LAB-082,Microbiology,Throat swab,5 days,Digital PDF,LAB,999316,18,750,900,,ACTIVE
+Stool Culture & Sensitivity,TPLAB-LAB-083,Microbiology,Stool,5 days,Digital PDF,LAB,999316,18,850,1000,,ACTIVE
+CSF Analysis (Cell count + biochemistry),TPLAB-LAB-084,Microbiology,CSF,24 hours,Digital PDF,LAB,999316,18,1100,1300,,ACTIVE
+AFB Stain (Sputum),TPLAB-LAB-085,Microbiology,Sputum,48 hours,Digital PDF,LAB,999316,18,350,420,,ACTIVE
+Beta HCG (Pregnancy test),TPLAB-LAB-070,Hormones,Serum,24 hours,Digital PDF,LAB,999316,18,500,600,,ACTIVE
+FSH (Follicle Stimulating Hormone),TPLAB-LAB-090,Hormones,Serum,48 hours,Digital PDF,LAB,999316,18,550,650,,ACTIVE
+LH (Luteinizing Hormone),TPLAB-LAB-091,Hormones,Serum,48 hours,Digital PDF,LAB,999316,18,550,650,,ACTIVE
+Prolactin,TPLAB-LAB-092,Hormones,Serum,48 hours,Digital PDF,LAB,999316,18,550,650,,ACTIVE
+Testosterone (Total),TPLAB-LAB-093,Hormones,Serum,48 hours,Digital PDF,LAB,999316,18,600,700,,ACTIVE
+Estradiol (E2),TPLAB-LAB-094,Hormones,Serum,48 hours,Digital PDF,LAB,999316,18,650,750,,ACTIVE
+Progesterone,TPLAB-LAB-095,Hormones,Serum,48 hours,Digital PDF,LAB,999316,18,600,700,,ACTIVE
+Cortisol (Morning),TPLAB-LAB-096,Hormones,Serum (8 AM),48 hours,Digital PDF,LAB,999316,18,650,750,,ACTIVE
+DHEAS,TPLAB-LAB-097,Hormones,Serum,48 hours,Digital PDF,LAB,999316,18,700,850,,ACTIVE
+AMH (Anti-Mullerian Hormone),TPLAB-LAB-098,Hormones,Serum,48 hours,Digital PDF,LAB,999316,18,1800,2100,,ACTIVE
+PTH (Parathyroid Hormone),TPLAB-LAB-099,Hormones,Serum,48 hours,Digital PDF,LAB,999316,18,1200,1400,,ACTIVE
+Insulin (Fasting),TPLAB-LAB-100,Hormones,Serum (fasting),48 hours,Digital PDF,LAB,999316,18,800,950,,ACTIVE
+PSA (Prostate Specific Antigen),TPLAB-LAB-071,Oncology,Serum,48 hours,Digital PDF,LAB,999316,18,700,850,,ACTIVE
+CA-125 (Ovarian marker),TPLAB-LAB-072,Oncology,Serum,48 hours,Digital PDF,LAB,999316,18,1200,1400,,ACTIVE
+CEA (Carcinoembryonic Antigen),TPLAB-LAB-110,Oncology,Serum,48 hours,Digital PDF,LAB,999316,18,900,1050,,ACTIVE
+AFP (Alpha Fetoprotein),TPLAB-LAB-111,Oncology,Serum,48 hours,Digital PDF,LAB,999316,18,900,1050,,ACTIVE
+CA 19-9,TPLAB-LAB-112,Oncology,Serum,48 hours,Digital PDF,LAB,999316,18,1200,1400,,ACTIVE
+CA 15-3,TPLAB-LAB-113,Oncology,Serum,48 hours,Digital PDF,LAB,999316,18,1200,1400,,ACTIVE
+Troponin I (cardiac),TPLAB-LAB-073,Cardiac,Serum,6 hours,Digital PDF,LAB,999316,18,1200,1450,,ACTIVE
+CK-MB,TPLAB-LAB-114,Cardiac,Serum,6 hours,Digital PDF,LAB,999316,18,700,850,,ACTIVE
+NT-proBNP,TPLAB-LAB-115,Cardiac,Serum,24 hours,Digital PDF,LAB,999316,18,2500,2900,,ACTIVE
+Total IgE,TPLAB-LAB-120,Immunology,Serum,48 hours,Digital PDF,LAB,999316,18,700,850,,ACTIVE
+ANA Screening,TPLAB-LAB-121,Immunology,Serum,72 hours,Digital PDF,LAB,999316,18,1100,1300,,ACTIVE
+Complement C3,TPLAB-LAB-122,Immunology,Serum,48 hours,Digital PDF,LAB,999316,18,900,1050,,ACTIVE
+Complement C4,TPLAB-LAB-123,Immunology,Serum,48 hours,Digital PDF,LAB,999316,18,900,1050,,ACTIVE
+TB Quantiferon (IGRA),TPLAB-LAB-130,Molecular,Blood,72 hours,Digital PDF,LAB,999316,18,2200,2600,,ACTIVE
+HLA-B27,TPLAB-LAB-131,Molecular,Blood (EDTA),7 days,Digital PDF,LAB,999316,18,3500,4000,,ACTIVE
+Basic Health Checkup Package,TPLAB-PKG-001,Packages,Blood + Urine,48 hours,Printed + Digital,DIAGNOSTIC,998419,18,1499,1999,,ACTIVE
+Diabetes Care Package,TPLAB-PKG-002,Packages,Blood,24 hours,Digital PDF,DIAGNOSTIC,998419,18,999,1299,,ACTIVE
+Thyroid Care Package,TPLAB-PKG-003,Packages,Serum,48 hours,Digital PDF,DIAGNOSTIC,998419,18,899,1099,,ACTIVE
+Liver Care Package,TPLAB-PKG-004,Packages,Serum,48 hours,Digital PDF,DIAGNOSTIC,998419,18,799,999,,ACTIVE
+Fever Panel (Dengue/Malaria/Typhoid),TPLAB-PKG-005,Packages,Blood + Serum,24 hours,Digital PDF,DIAGNOSTIC,998419,18,1299,1599,,ACTIVE
+Full Body Checkup (Premium),TPLAB-PKG-006,Packages,Blood + Urine,48 hours,Printed + Digital,DIAGNOSTIC,998419,18,2999,3999,,ACTIVE
+Senior Citizen Health Package,TPLAB-PKG-007,Packages,Blood + Urine,48 hours,Printed + Digital,DIAGNOSTIC,998419,18,1999,2499,,ACTIVE
+Women's Health Package,TPLAB-PKG-008,Packages,Blood + Urine,48 hours,Printed + Digital,DIAGNOSTIC,998419,18,2499,2999,,ACTIVE
+Pre-Employment Health Check,TPLAB-PKG-009,Packages,Blood + Urine,24 hours,Printed + Digital,DIAGNOSTIC,998419,18,999,1299,,ACTIVE
+Kidney Care Package,TPLAB-PKG-010,Packages,Serum + Urine,24 hours,Digital PDF,DIAGNOSTIC,998419,18,899,1099,,ACTIVE
+Heart Care Package,TPLAB-PKG-011,Packages,Serum,48 hours,Digital PDF,DIAGNOSTIC,998419,18,1799,2199,,ACTIVE
+ANC / Pregnancy Profile,TPLAB-PKG-012,Packages,Serum + Urine,48 hours,Digital PDF,DIAGNOSTIC,998419,18,1999,2499,,ACTIVE
+PCOD Profile,TPLAB-PKG-013,Packages,Serum,48 hours,Digital PDF,DIAGNOSTIC,998419,18,2499,2999,,ACTIVE
+Vitamin Deficiency Panel,TPLAB-PKG-014,Packages,Serum,48 hours,Digital PDF,DIAGNOSTIC,998419,18,2999,3499,,ACTIVE
+Arthritis Panel,TPLAB-PKG-015,Packages,Serum,48 hours,Digital PDF,DIAGNOSTIC,998419,18,1499,1799,,ACTIVE

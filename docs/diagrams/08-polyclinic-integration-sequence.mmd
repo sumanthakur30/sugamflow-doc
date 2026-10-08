@@ -1,0 +1,31 @@
+sequenceDiagram
+    participant R as Reception UI
+    participant OPD as opd-management
+    participant APT as appointment-service
+    participant Q as queue-service
+    participant D as Doctor Dashboard
+    participant CS as consultation-service
+    participant PS as prescription-service
+    participant OS as order-service
+    participant LAB as Lab order-service
+    participant PH as Pharmacy UI
+    participant NS as notification-service
+
+    R->>OPD: registerWalkIn(patient, doctor)
+    OPD->>APT: createWalkInAppointment
+    OPD->>Q: generateToken
+    Q-->>NS: token SMS
+
+    D->>Q: callNext
+    Q->>CS: startConsultation
+    D->>CS: updateConsultation(vitals, notes, diagnosis)
+    D->>PS: createPrescription
+    PS->>OS: pushToPharmacyQueue
+    D->>LAB: createLabOrder
+    D->>CS: completeConsultation
+
+    CS->>OS: createConsultationBill
+    PH->>OS: dispensePrescription → GST order
+
+    LAB-->>NS: resultReady → notify patient
+    LAB-->>D: result alert on dashboard

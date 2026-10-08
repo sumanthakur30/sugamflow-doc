@@ -1,0 +1,222 @@
+﻿{
+    "generatedAt":  "2026-07-26T09:35:28.8515557+05:30",
+    "shopId":  "PATH-DEMO-01",
+    "tenantId":  119,
+    "labStaffLogin":  {
+                          "shopId":  "PATH-DEMO-01",
+                          "password":  "Demo@2026",
+                          "note":  "UI accepts username demo and scopes to demo_PATH-DEMO-01",
+                          "username":  "demo_PATH-DEMO-01",
+                          "uiUrl":  "http://localhost:4200",
+                          "mode":  "Shop owner"
+                      },
+    "patientIdentityCredentials":  [
+                                       {
+                                           "key":  "P1",
+                                           "name":  "Ananya Krishnan",
+                                           "uhid":  "PATH-UHID-2847",
+                                           "phone":  "9101190001",
+                                           "email":  "ananya.krishnan.path@gmail.com",
+                                           "dob":  "1998-03-14",
+                                           "gender":  "FEMALE",
+                                           "lookupHint":  "Search by phone 9101190001 or UHID PATH-UHID-2847",
+                                           "note":  "CUSTOMER records only - no patient-portal password in this demo"
+                                       },
+                                       {
+                                           "key":  "P2",
+                                           "name":  "Rajesh Kumar Mehta",
+                                           "uhid":  "PATH-UHID-5193",
+                                           "phone":  "9101190002",
+                                           "email":  "rajesh.mehta52@yahoo.com",
+                                           "dob":  "1974-08-22",
+                                           "gender":  "MALE",
+                                           "lookupHint":  "Search by phone 9101190002 or UHID PATH-UHID-5193",
+                                           "note":  "CUSTOMER records only - no patient-portal password in this demo"
+                                       },
+                                       {
+                                           "key":  "P3",
+                                           "name":  "Fatima Begum",
+                                           "uhid":  "PATH-UHID-4108",
+                                           "phone":  "9101190003",
+                                           "email":  "fatima.begum.hyd@gmail.com",
+                                           "dob":  "1985-11-05",
+                                           "gender":  "FEMALE",
+                                           "lookupHint":  "Search by phone 9101190003 or UHID PATH-UHID-4108",
+                                           "note":  "CUSTOMER records only - no patient-portal password in this demo"
+                                       },
+                                       {
+                                           "key":  "P4",
+                                           "name":  "Arjun Singh Chauhan",
+                                           "uhid":  "PATH-UHID-3521",
+                                           "phone":  "9101190004",
+                                           "email":  "arjun.chauhan.lko@outlook.com",
+                                           "dob":  "1991-01-30",
+                                           "gender":  "MALE",
+                                           "lookupHint":  "Search by phone 9101190004 or UHID PATH-UHID-3521",
+                                           "note":  "CUSTOMER records only - no patient-portal password in this demo"
+                                       },
+                                       {
+                                           "key":  "P5",
+                                           "name":  "Priya Lakshmi Nair",
+                                           "uhid":  "PATH-UHID-6702",
+                                           "phone":  "9101190005",
+                                           "email":  "priya.nair.kochi@gmail.com",
+                                           "dob":  "1959-06-18",
+                                           "gender":  "FEMALE",
+                                           "lookupHint":  "Search by phone 9101190005 or UHID PATH-UHID-6702",
+                                           "note":  "CUSTOMER records only - no patient-portal password in this demo"
+                                       }
+                                   ],
+    "flows":  [
+                  {
+                      "key":  "P1",
+                      "patientName":  "Ananya Krishnan",
+                      "ageNote":  "28Y / F",
+                      "phone":  "9101190001",
+                      "email":  "ananya.krishnan.path@gmail.com",
+                      "uhid":  "PATH-UHID-2847",
+                      "gender":  "FEMALE",
+                      "dateOfBirth":  "1998-03-14",
+                      "address":  "Flat 12B, Lakeview Residency, Indiranagar, Bengaluru 560038",
+                      "customerId":  407,
+                      "doctor":  "Dr. Meera Iyer",
+                      "clinical":  "Pre-employment wellness package; fasting 10 hours",
+                      "tests":  [
+                                    "PATH-005"
+                                ],
+                      "orderId":  131,
+                      "sampleBarcode":  "PATH-P1-20260726093504",
+                      "billId":  435,
+                      "billTotal":  1999.0,
+                      "paymentMethod":  "UPI",
+                      "billPaid":  true,
+                      "reportVersionId":  98,
+                      "reportStatus":  "RELEASED",
+                      "pdf":  "P1-PATH-UHID-2847-report.pdf",
+                      "extras":  [
+                                     "ai",
+                                     "fhir",
+                                     "rxocr"
+                                 ]
+                  },
+                  {
+                      "key":  "P2",
+                      "patientName":  "Rajesh Kumar Mehta",
+                      "ageNote":  "51Y / M",
+                      "phone":  "9101190002",
+                      "email":  "rajesh.mehta52@yahoo.com",
+                      "uhid":  "PATH-UHID-5193",
+                      "gender":  "MALE",
+                      "dateOfBirth":  "1974-08-22",
+                      "address":  "B-204, Shanti Niketan Society, Satellite Road, Ahmedabad 380015",
+                      "customerId":  406,
+                      "doctor":  "Dr. Paresh Shah",
+                      "clinical":  "Type-2 DM follow-up; on Metformin 500 mg BD; fasting sample",
+                      "tests":  [
+                                    "PATH-003",
+                                    "PATH-002"
+                                ],
+                      "orderId":  132,
+                      "sampleBarcode":  "PATH-P2-20260726093504",
+                      "billId":  436,
+                      "billTotal":  570.0,
+                      "paymentMethod":  "CASH",
+                      "billPaid":  true,
+                      "reportVersionId":  99,
+                      "reportStatus":  "RELEASED",
+                      "pdf":  "P2-PATH-UHID-5193-report.pdf",
+                      "extras":  [
+
+                                 ]
+                  },
+                  {
+                      "key":  "P3",
+                      "patientName":  "Fatima Begum",
+                      "ageNote":  "40Y / F",
+                      "phone":  "9101190003",
+                      "email":  "fatima.begum.hyd@gmail.com",
+                      "uhid":  "PATH-UHID-4108",
+                      "gender":  "FEMALE",
+                      "dateOfBirth":  "1985-11-05",
+                      "address":  "H.No. 8-2-293/82, Road No. 36, Jubilee Hills, Hyderabad 500033",
+                      "customerId":  409,
+                      "doctor":  "Dr. Sana Qureshi",
+                      "clinical":  "Fatigue, weight gain, cold intolerance - rule out hypothyroidism",
+                      "tests":  [
+                                    "PATH-004"
+                                ],
+                      "orderId":  133,
+                      "sampleBarcode":  "PATH-P3-20260726093504",
+                      "billId":  437,
+                      "billTotal":  550.0,
+                      "paymentMethod":  "CARD",
+                      "billPaid":  true,
+                      "reportVersionId":  100,
+                      "reportStatus":  "RELEASED",
+                      "pdf":  "P3-PATH-UHID-4108-report.pdf",
+                      "extras":  [
+                                     "abha"
+                                 ]
+                  },
+                  {
+                      "key":  "P4",
+                      "patientName":  "Arjun Singh Chauhan",
+                      "ageNote":  "35Y / M",
+                      "phone":  "9101190004",
+                      "email":  "arjun.chauhan.lko@outlook.com",
+                      "uhid":  "PATH-UHID-3521",
+                      "gender":  "MALE",
+                      "dateOfBirth":  "1991-01-30",
+                      "address":  "42, Hazratganj Civil Lines, Lucknow 226001",
+                      "customerId":  410,
+                      "doctor":  "Dr. Vikram Tripathi",
+                      "clinical":  "Fever with chills 4 days; suspected enteric/bacterial infection",
+                      "tests":  [
+                                    "PATH-001"
+                                ],
+                      "orderId":  134,
+                      "sampleBarcode":  "PATH-P4-20260726093504",
+                      "billId":  438,
+                      "billTotal":  350.0,
+                      "paymentMethod":  "CASH",
+                      "billPaid":  true,
+                      "reportVersionId":  101,
+                      "reportStatus":  "RELEASED",
+                      "pdf":  "P4-PATH-UHID-3521-report.pdf",
+                      "extras":  [
+                                     "micro"
+                                 ]
+                  },
+                  {
+                      "key":  "P5",
+                      "patientName":  "Priya Lakshmi Nair",
+                      "ageNote":  "67Y / F",
+                      "phone":  "9101190005",
+                      "email":  "priya.nair.kochi@gmail.com",
+                      "uhid":  "PATH-UHID-6702",
+                      "gender":  "FEMALE",
+                      "dateOfBirth":  "1959-06-18",
+                      "address":  "Villa 7, Panampilly Nagar, Ernakulam, Kochi 682036",
+                      "customerId":  408,
+                      "doctor":  "Dr. Anil Menon",
+                      "clinical":  "Geriatric annual review; skin lesion biopsy referred for HPE",
+                      "tests":  [
+                                    "PATH-001",
+                                    "PATH-004"
+                                ],
+                      "orderId":  135,
+                      "sampleBarcode":  "PATH-P5-20260726093504",
+                      "billId":  439,
+                      "billTotal":  900.0,
+                      "paymentMethod":  "UPI",
+                      "billPaid":  true,
+                      "reportVersionId":  102,
+                      "reportStatus":  "RELEASED",
+                      "pdf":  "P5-PATH-UHID-6702-report.pdf",
+                      "extras":  [
+                                     "histo",
+                                     "ai"
+                                 ]
+                  }
+              ]
+}

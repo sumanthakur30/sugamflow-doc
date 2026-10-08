@@ -1,0 +1,57 @@
+flowchart TB
+    subgraph frontend [shop-management-ui]
+        DD[Doctor Dashboard]
+        RD[Reception Dashboard]
+        QS[Queue Display]
+        LAB[Lab Workbench]
+        PH[Pharmacy - existing]
+    end
+
+    subgraph gateway [gateway-service :9090]
+        GW[Spring Cloud Gateway]
+    end
+
+    subgraph clinical [New Clinical Services]
+        DS[doctor-service :8092]
+        AS[appointment-service :8093]
+        CS[consultation-service :8094]
+        PS[prescription-service :8095]
+        CRS[clinical-record-service :8096]
+        OPD[opd-management-service :8097]
+        QM[queue-management-service :8098]
+        PHS[patient-history-service :8099]
+    end
+
+    subgraph existing [Existing Services]
+        US[user-service]
+        OS[order-service]
+        PR[product-service]
+        ST[stock-service]
+        GS[gst-service]
+        NS[notification-service]
+        AC[account-service]
+        AU[auth-service]
+        RP[reporting-service]
+    end
+
+    frontend --> GW
+    GW --> clinical
+    GW --> existing
+
+    CS --> DS
+    CS --> CRS
+    CS --> QM
+    AS --> DS
+    AS --> QM
+    AS --> NS
+    QM --> NS
+    PS --> PR
+    PS --> ST
+    PS --> OS
+    CS --> PS
+    CS --> OS
+    OPD --> AS
+    OPD --> QM
+    PHS --> CS
+    PHS --> CRS
+    PHS --> OS

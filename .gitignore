@@ -1,0 +1,24 @@
+# Local secrets — never commit
+.env
+.env.*
+!.env.example
+!.env.production.example
+.env_oldforlocal
+
+# Credential exports and local password files
+**/*Credentials.*
+**/*credentials.*
+db-passwords.local.bat
+postgres-credentials.local.bat
+*.pem
+*.p12
+*.key
+id_rsa
+id_rsa.pub
+
+# Generated / local
+node_modules/
+*.log
+.local/
+docker-diagnostics.zip
+*.zip
