@@ -4,7 +4,6 @@ REM   sequences\run-sequence.cmd 00
 REM   sequences\run-sequence.cmd build 00,01,02
 REM   sequences\run-sequence.cmd login
 setlocal
-cd /d "%~dp0\..\.."
 if "%~1"=="" (
   echo Usage: run-sequence.cmd 00^|01^|02^|03^|04
   echo        run-sequence.cmd build 00,01,02
@@ -13,7 +12,7 @@ if "%~1"=="" (
   exit /b 1
 )
 if /I "%~1"=="login" (
-  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0\..\ensure-login-stack.ps1" %2 %3 %4
+  powershell -NoProfile -ExecutionPolicy Bypass -File "D:\sugamFlow\scripts\ensure-login-stack.ps1" %2 %3 %4
   exit /b %ERRORLEVEL%
 )
 if /I "%~1"=="build" (

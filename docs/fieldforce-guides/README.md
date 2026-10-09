@@ -1,5 +1,9 @@
 # Field Force guide PDFs
 
+Product rules for the add-on (subscription, caps, settings, API) are in [../fieldforce/overview.md](../fieldforce/overview.md).
+
+
+
 | Output | Source |
 |--------|--------|
 | `FIELDFORCE-Salesman-Promoter-Guide-English.pdf` | `../FIELDFORCE-SALESMAN-PROMOTER-GUIDE.md` |

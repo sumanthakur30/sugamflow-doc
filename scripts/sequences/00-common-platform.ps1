@@ -24,7 +24,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$script = Join-Path (Split-Path $PSScriptRoot -Parent) 'start-common-platform.ps1'
+# Canonical sequence lives in D:\sugamflow-doc. The compose repo and its runtime scripts stay in D:\sugamFlow.
+$SugamFlowRoot = 'D:\sugamFlow'
+$script = Join-Path $SugamFlowRoot 'scripts\start-common-platform.ps1'
 if (-not (Test-Path -LiteralPath $script)) {
     throw "Missing $script"
 }
@@ -46,8 +48,8 @@ if ($code -ne 0) { exit $code }
 
 Write-Host ''
 Write-Host 'NEXT:' -ForegroundColor Yellow
-Write-Host '  Retail / shop:     .\scripts\sequences\01-sugamflow-retail.ps1'
-Write-Host '  Hospital/clinic:   .\scripts\sequences\02-hospital-polyclinic.ps1'
-Write-Host '  School ERP:        .\scripts\sequences\03-school-erp.ps1'
-Write-Host '  CRM:               .\scripts\sequences\04-crm.ps1'
+Write-Host '  Retail / shop:     D:\sugamflow-doc\scripts\sequences\01-sugamflow-retail.ps1'
+Write-Host '  Hospital/clinic:   D:\sugamflow-doc\scripts\sequences\02-hospital-polyclinic.ps1'
+Write-Host '  School ERP:        D:\sugamflow-doc\scripts\sequences\03-school-erp.ps1'
+Write-Host '  CRM:               D:\sugamflow-doc\scripts\sequences\04-crm.ps1'
 exit 0

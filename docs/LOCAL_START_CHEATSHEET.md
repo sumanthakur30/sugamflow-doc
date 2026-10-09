@@ -59,7 +59,7 @@ cd D:\sugamFlow
 **Build once (images):**
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\build-by-sequence.ps1 -Seq 00
 ```
 
@@ -77,7 +77,7 @@ cd D:\sugamFlow
 Docker required. No `-ExposeSchoolPorts`.
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\00-common-platform.ps1 -SkipMailHog
 .\scripts\sequences\01-sugamflow-retail.ps1 -WithUi
 ```
@@ -125,7 +125,7 @@ Numbered local start (do not use School `ng serve --port 4300`):
 Usually needs Retail POS/stock too.
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\00-common-platform.ps1 -SkipMailHog
 .\scripts\sequences\01-sugamflow-retail.ps1
 .\scripts\sequences\02-hospital-polyclinic.ps1 -WithUi
@@ -155,7 +155,7 @@ cd D:\sugamFlow
 On top of Hospital (`00` + `01` + `02`). Local Maven jars (gateway points to host).
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\00-common-platform.ps1 -SkipMailHog
 .\scripts\sequences\01-sugamflow-retail.ps1
 .\scripts\sequences\02-hospital-polyclinic.ps1
@@ -202,7 +202,7 @@ Needs common with **`-ExposeSchoolPorts`** (or jar platform). School services ar
 ### Docker common (preferred when sharing Eureka with Retail/Hospital)
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\00-common-platform.ps1 -ExposeSchoolPorts -SkipMailHog
 .\scripts\sequences\03-school-erp.ps1 -WithUi
 ```
@@ -248,7 +248,7 @@ npx ng serve --port 4300
 **Build school jars:**
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\build-by-sequence.ps1 -Seq 03
 # or: cd D:\school\services ; mvn -DskipTests package
 ```
@@ -301,7 +301,7 @@ cd D:\sugamFlow
 ## Everything (rare)
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\build-by-sequence.ps1 -Seq 00,01,02,03,04
 
 .\scripts\sequences\00-common-platform.ps1 -ExposeSchoolPorts -SkipMailHog

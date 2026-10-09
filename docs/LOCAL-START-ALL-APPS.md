@@ -76,7 +76,7 @@ flowchart TD
 ## 1. Common platform (always first)
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\00-common-platform.ps1 -SkipMailHog
 ```
 
@@ -123,7 +123,7 @@ Run only what you need. Common must already be up.
 ### Retail
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\01-sugamflow-retail.ps1 -WithUi
 ```
 
@@ -144,7 +144,7 @@ Legacy equivalent (no clinic):
 Needs Retail POS/stock (SEQ 01) as well.
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\01-sugamflow-retail.ps1
 .\scripts\sequences\02-hospital-polyclinic.ps1 -WithUi
 ```
@@ -158,7 +158,7 @@ cd D:\sugamFlow
 ### School ERP
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\03-school-erp.ps1 -WithUi
 ```
 
@@ -244,7 +244,7 @@ Ports: IPD `:8100`, accommodation `:8101`. UI routes under shop `:4200`.
 ## 3. Full desk (all verticals)
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\00-common-platform.ps1 -SkipMailHog
 .\scripts\sequences\01-sugamflow-retail.ps1
 .\scripts\sequences\02-hospital-polyclinic.ps1
@@ -283,7 +283,7 @@ cd D:\sugamFlow
 ## 5. Build (when images/jars are missing)
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\build-by-sequence.ps1 -Seq 00,01,02
 .\scripts\sequences\build-by-sequence.ps1 -Seq 03          # school + subscription jars
 .\scripts\sequences\build-by-sequence.ps1 -Seq 04          # crm image
@@ -312,4 +312,4 @@ SEQ 03 `mvn package` builds `subscription-service` but does **not** start it. St
 ## Related
 
 - Engine / prune: [DOCKER-CLEAN.md](DOCKER-CLEAN.md)
-- Sequence internals: `D:\sugamFlow\scripts\sequences\README.md`
+- Sequence internals: `D:\sugamflow-doc\scripts\sequences\README.md`

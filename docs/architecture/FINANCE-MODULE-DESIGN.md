@@ -4,7 +4,7 @@
 **Date:** 2026-08-08  
 **Scope:** All business types (Medical, Pharmacy, Path Lab, Polyclinic, Retail, Grocery, Electronics, School, future verticals)  
 **Repos:** `D:\DevData\tmp\prod-postdeploy-20260808\FINANCE-MODULE-DESIGN.md`  
-**Durable copy:** `D:\sugamFlow\docs\architecture\FINANCE-MODULE-DESIGN.md`
+**Durable copy:** `D:\sugamflow-doc\docs\architecture\FINANCE-MODULE-DESIGN.md`
 
 ---
 

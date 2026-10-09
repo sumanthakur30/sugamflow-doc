@@ -4,7 +4,7 @@
 **Date:** 2026-08-08  
 **Scope:** SugamFlow ERP — PDF/JPG/PNG/scanned purchase-order documents → OCR+AI extract → match → human review → create normal PO → GRN → stock via existing stock-service  
 **Repos:** `D:\DevData\tmp\prod-postdeploy-20260808\PO-OCR-UPLOAD-DESIGN.md`  
-**Durable copy:** `D:\sugamFlow\docs\architecture\PO-OCR-UPLOAD-DESIGN.md`
+**Durable copy:** `D:\sugamflow-doc\docs\architecture\PO-OCR-UPLOAD-DESIGN.md`
 
 ---
 

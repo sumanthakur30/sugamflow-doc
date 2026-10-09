@@ -1,8 +1,10 @@
 # Application start sequences (step by step)
 
-**Operator runbook (all apps):** `D:\sugamFlow\docs\LOCAL-START-ALL-APPS.md`  
+**Operator runbook (all apps):** `D:\sugamflow-doc\docs\LOCAL-START-ALL-APPS.md`  
 **Observability (Grafana :3001, laptop only):** `D:\sugamFlow\scripts\start-observability-local.ps1` — see `D:\sugamFlow\observability\OBSERVABILITY.md`  
 Do **not** run that compose file on the production app EC2.
+
+Run the sequence scripts from `D:\sugamflow-doc`. `D:\sugamFlow\scripts\sequences` only forwards to these files. Compose, Docker builds, and service repos stay in `D:\sugamFlow`. School jars stay in `D:\school`.
 
 Common microservices are shared. **Build** images/jars first, then **start** SEQ 00 once, then only the apps you need.
 
@@ -15,7 +17,8 @@ Common microservices are shared. **Build** images/jars first, then **start** SEQ
 | **03** | `03-school-erp.ps1` | **Maven jars** under `D:\school\services` (not Docker) | School domain :8181–8199 (+ UI :4300) |
 | **04** | `04-crm.ps1` | Docker: crm-service | CRM API :8095 + UI :4500 |
 
-Root: `D:\sugamFlow`
+Sequence scripts: `D:\sugamflow-doc\scripts\sequences`  
+Application repo: `D:\sugamFlow`
 
 ---
 
@@ -24,7 +27,7 @@ Root: `D:\sugamFlow`
 One script builds by sequence (bases + compose images, school jars for 03):
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 
 # Bases + SEQ 00+01+02 Docker images (uses IMAGE_TAG from .env.local, e.g. 1.0.2)
 .\scripts\sequences\build-by-sequence.ps1 -Seq 00,01,02
@@ -127,7 +130,7 @@ cd D:\sugamFlow
 ### A) Retail / shop only
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\00-common-platform.ps1 -SkipMailHog
 .\scripts\sequences\01-sugamflow-retail.ps1 -WithUi
 ```
@@ -147,7 +150,7 @@ Billing works without them: order-service uses its local GST calculator and skip
 ### B) Hospital / polyclinic
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\00-common-platform.ps1 -SkipMailHog
 .\scripts\sequences\01-sugamflow-retail.ps1          # POS/stock usually needed
 .\scripts\sequences\02-hospital-polyclinic.ps1 -WithUi
@@ -158,7 +161,7 @@ Demo shop: `POLY-DEMO-01` / `demo` / `Demo@2026`
 ### C) School ERP
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\00-common-platform.ps1 -ExposeSchoolPorts -SkipMailHog
 .\scripts\sequences\03-school-erp.ps1 -WithUi
 ```
@@ -168,7 +171,7 @@ Open http://localhost:4300 — see `D:\school\docs\DAILY_START.md`
 ### D) CRM (standalone pilot)
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 # Postgres with crmdb must be up (SEQ 00 or local Postgres)
 .\scripts\sequences\04-crm.ps1 -WithUi
 # optional: .\scripts\sequences\04-crm.ps1 -RunSmoke
@@ -187,7 +190,7 @@ Local smoke disables entitlements. For real `FEATURE_CRM`:
 ### E) Everything (common → retail → clinic → school → CRM)
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 # Build first (once per tag):
 .\scripts\sequences\build-by-sequence.ps1 -Seq 00,01,02,03,04
 
