@@ -10,16 +10,18 @@ Do not put passwords in the command line. Compose reads `D:\sugamFlow\.env.local
 
 ## 1. Start, stop, and check everything
 
-Directory: `D:\sugamFlow`, unless the command says `D:\sugamflow-doc`.
+Daily start, stop, status, Docker, login, IPD, image build, and school JVM scripts live in `D:\sugamflow-doc\scripts`. The same names under `D:\sugamFlow`, plus `D:\school\scripts\start-services.ps1`, only forward there. Compose still runs in `D:\sugamFlow`.
 
 ### Start the shop stack
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\daily-start-sugamflow.ps1 -WithUi
 ```
 
-This starts Docker Desktop if needed, then `start-local.ps1`, then the shop UI on port 4200 in a new window. Without `-WithUi`, start the UI yourself:
+`cd D:\sugamFlow` then `.\scripts\daily-start-sugamflow.ps1 -WithUi` does the same through the forwarder.
+
+This starts Docker Desktop if needed, then `D:\sugamFlow\start-local.ps1`, then the shop UI on port 4200 in a new window. Without `-WithUi`, start the UI yourself:
 
 ```powershell
 cd D:\sugamFlow\shop-management-ui
@@ -45,9 +47,11 @@ cd D:\sugamflow-doc
 ### Status
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\daily-status-sugamflow.ps1
 ```
+
+`D:\sugamFlow\scripts\daily-status-sugamflow.ps1` only forwards.
 
 Success: Docker engine is OK, `docker compose ps` lists the stack, and gateway `http://localhost:9090/actuator/health` returns HTTP 200.
 
@@ -56,18 +60,20 @@ Success: Docker engine is OK, `docker compose ps` lists the stack, and gateway `
 Stop Docker services only (Docker Desktop stays up):
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\daily-stop-sugamflow.ps1
 ```
 
-That runs `docker compose --env-file .env.local down`. It does not delete volumes.
+`D:\sugamFlow\scripts\daily-stop-sugamflow.ps1` only forwards. That runs `docker compose --env-file D:\sugamFlow\.env.local down` from `D:\sugamFlow`. It does not delete volumes.
 
 Stop school JVMs, school UI, and the common Docker stack:
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\stop-shared-runtime.ps1 -All
 ```
+
+`D:\sugamFlow\scripts\stop-shared-runtime.ps1` only forwards.
 
 Narrower flags: `-School`, `-SchoolUi`, `-CommonDocker`.
 
@@ -92,7 +98,7 @@ If it fails to stop, see [When a service will not stop](#when-a-service-will-not
 5. gateway `:9090`.
 6. Then retail, clinic, school, or CRM.
 
-Sequence 00 does steps 2–6 for the common platform. Retail and clinic call `D:\sugamFlow\scripts\ensure-login-stack.ps1` before they finish.
+Sequence 00 does steps 2–6 for the common platform. Retail and clinic call `D:\sugamflow-doc\scripts\ensure-login-stack.ps1` before they finish. `D:\sugamFlow\scripts\ensure-login-stack.ps1` only forwards.
 
 ## 3. Service reference
 
@@ -179,11 +185,11 @@ docker compose --env-file .env.local up -d doctor-service appointment-service qu
 
 ### IPD (local)
 
-`D:\sugamFlow\scripts\start-local-ipd.ps1` stops anything listening on ports 8100 and 8101, then starts IPD with `docker-compose.yml` plus `docker-compose.ipd.yml`. Stop with `.\scripts\stop-local-ipd.ps1`. First database: `.\scripts\rds-ipd-accommodation\00-create-ipddb.ps1`.
+`D:\sugamflow-doc\scripts\start-local-ipd.ps1` stops anything listening on ports 8100 and 8101, then starts IPD from `D:\sugamFlow` with `docker-compose.yml` plus `docker-compose.ipd.yml`. `D:\sugamFlow\scripts\start-local-ipd.ps1` only forwards. Stop with `D:\sugamFlow\scripts\stop-local-ipd.ps1`. First database: `.\scripts\rds-ipd-accommodation\00-create-ipddb.ps1` from `D:\sugamFlow`.
 
 ### School jars
 
-Directory of the sequence: `D:\sugamflow-doc`. The jars and the start script stay in `D:\school`.
+Directory of the sequence: `D:\sugamflow-doc`. The jars stay in `D:\school\services`.
 
 ```powershell
 cd D:\sugamflow-doc
@@ -191,7 +197,7 @@ cd D:\sugamflow-doc
 .\scripts\sequences\03-school-erp.ps1
 ```
 
-`D:\school\scripts\start-services.ps1` is what sequence 03 calls. Ports 8181–8202:
+Sequence 03 calls `D:\school\scripts\start-services.ps1`, which only forwards to `D:\sugamflow-doc\scripts\start-services.ps1`. Ports 8181–8202:
 
 | Port | Service |
 |---:|---|
@@ -223,7 +229,7 @@ Health: `http://localhost:8181/actuator/health` (same path on each port). Logs: 
 Stop school JVMs:
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\stop-shared-runtime.ps1 -School
 ```
 
@@ -238,11 +244,11 @@ Or `.\scripts\sequences\03-school-erp.ps1 -WithUi`.
 
 ### Build images before a local or EC2 pull
 
-Directory `D:\sugamFlow`. This builds and can push. It was not run here.
+The script lives in `D:\sugamflow-doc\scripts`. It builds in `D:\sugamFlow`. It was not run here. `D:\sugamFlow\build-docker.ps1` only forwards.
 
 ```powershell
-cd D:\sugamFlow
-.\build-docker.ps1 -Parallel 1 -Services config-service,discovery-service,auth-service,shop-service,user-service,notification-service,gateway-service
+cd D:\sugamflow-doc
+.\scripts\build-docker.ps1 -Parallel 1 -Services config-service,discovery-service,auth-service,shop-service,user-service,notification-service,gateway-service
 ```
 
 Sequence wrapper (directory `D:\sugamflow-doc`):
@@ -291,7 +297,7 @@ Grafana in that local compose is `http://localhost:3001`. Do not start that comp
 2. `docker compose --env-file .env.local logs --tail=80 <service>`.
 3. `docker compose --env-file .env.local stop <service>`.
 4. If the container stays, `docker compose --env-file .env.local rm -sf <service>` removes that container. It does not delete the image or the database volume.
-5. For a school jar, `.\scripts\stop-shared-runtime.ps1 -School`. Do not delete `D:\school\services\*\target\*.jar` while `java.exe` has it open.
+5. For a school jar, `D:\sugamflow-doc\scripts\stop-shared-runtime.ps1 -School`. Do not delete `D:\school\services\*\target\*.jar` while `java.exe` has it open.
 
 `docker compose down -v` removes volumes. Use it only when you intend to wipe local Docker data.
 
@@ -306,11 +312,11 @@ docker compose -f docker-compose.ec2-rds.yml --env-file .env.production logs --t
 curl -sS http://127.0.0.1:9090/actuator/health
 ```
 
-There is no supported local-Linux daily script in `D:\sugamFlow\scripts`. Local development documented here is Windows PowerShell.
+There is no supported local-Linux daily script. Local development documented here is Windows PowerShell. The Windows daily scripts are in `D:\sugamflow-doc\scripts`.
 
 ## 7. Scripts reused
 
-No new scripts were added.
+Canonical copies are in `D:\sugamflow-doc\scripts`. Matching files under `D:\sugamFlow` and `D:\school\scripts\start-services.ps1` only forward.
 
 | Script | Purpose |
 |---|---|
@@ -321,12 +327,12 @@ No new scripts were added.
 | `D:\sugamflow-doc\scripts\sequences\03-school-erp.ps1` | School jars |
 | `D:\sugamflow-doc\scripts\sequences\04-crm.ps1` | CRM |
 | `D:\sugamflow-doc\scripts\sequences\build-by-sequence.ps1` | Build by sequence |
-| `D:\sugamFlow\scripts\daily-start-sugamflow.ps1` | Daily shop start |
-| `D:\sugamFlow\scripts\daily-stop-sugamflow.ps1` | Daily shop stop |
-| `D:\sugamFlow\scripts\daily-status-sugamflow.ps1` | Health snapshot |
-| `D:\sugamFlow\scripts\start-docker-clean.ps1` | Docker Desktop |
-| `D:\sugamFlow\scripts\ensure-login-stack.ps1` | Gateway and shop for login |
-| `D:\sugamFlow\scripts\stop-shared-runtime.ps1` | Stop school and/or Docker |
-| `D:\sugamFlow\scripts\start-local-ipd.ps1` | Local IPD |
-| `D:\sugamFlow\build-docker.ps1` | Image build |
-| `D:\school\scripts\start-services.ps1` | School JVMs |
+| `D:\sugamflow-doc\scripts\daily-start-sugamflow.ps1` | Daily shop start |
+| `D:\sugamflow-doc\scripts\daily-stop-sugamflow.ps1` | Daily shop stop |
+| `D:\sugamflow-doc\scripts\daily-status-sugamflow.ps1` | Health snapshot |
+| `D:\sugamflow-doc\scripts\start-docker-clean.ps1` | Docker Desktop |
+| `D:\sugamflow-doc\scripts\ensure-login-stack.ps1` | Gateway and shop for login |
+| `D:\sugamflow-doc\scripts\stop-shared-runtime.ps1` | Stop school and/or Docker |
+| `D:\sugamflow-doc\scripts\start-local-ipd.ps1` | Local IPD |
+| `D:\sugamflow-doc\scripts\build-docker.ps1` | Image build |
+| `D:\sugamflow-doc\scripts\start-services.ps1` | School JVMs |
