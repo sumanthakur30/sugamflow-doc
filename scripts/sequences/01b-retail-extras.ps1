@@ -28,9 +28,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$repoRoot = 'D:\sugamFlow'
 if (-not (Test-Path (Join-Path $repoRoot 'compose-local.ps1'))) {
-    $repoRoot = 'D:\sugamFlow'
+    throw "SugamFlow repo not found at $repoRoot (missing compose-local.ps1)"
 }
 Set-Location $repoRoot
 

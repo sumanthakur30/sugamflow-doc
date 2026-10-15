@@ -15,7 +15,7 @@ Common microservices are shared. **Build** images/jars first, then **start** SEQ
 | **03** | `03-school-erp.ps1` | **Maven jars** under `D:\school\services` (not Docker) | School domain :8181–8199 (+ UI :4300) |
 | **04** | `04-crm.ps1` | Docker: crm-service | CRM API :8095 + UI :4500 |
 
-Root: `D:\sugamFlow`
+Run sequences from `D:\sugamflow-doc` (this repo, so git tracks them). Docker Compose still runs in `D:\sugamFlow`.
 
 ---
 
@@ -127,7 +127,7 @@ cd D:\sugamFlow
 ### A) Retail / shop only
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\00-common-platform.ps1 -SkipMailHog
 .\scripts\sequences\01-sugamflow-retail.ps1 -WithUi
 ```
@@ -147,7 +147,7 @@ Billing works without them: order-service uses its local GST calculator and skip
 ### B) Hospital / polyclinic
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\00-common-platform.ps1 -SkipMailHog
 .\scripts\sequences\01-sugamflow-retail.ps1          # POS/stock usually needed
 .\scripts\sequences\02-hospital-polyclinic.ps1 -WithUi
@@ -158,7 +158,7 @@ Demo shop: `POLY-DEMO-01` / `demo` / `Demo@2026`
 ### C) School ERP
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 .\scripts\sequences\00-common-platform.ps1 -ExposeSchoolPorts -SkipMailHog
 .\scripts\sequences\03-school-erp.ps1 -WithUi
 ```
@@ -168,7 +168,7 @@ Open http://localhost:4300 — see `D:\school\docs\DAILY_START.md`
 ### D) CRM (standalone pilot)
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 # Postgres with crmdb must be up (SEQ 00 or local Postgres)
 .\scripts\sequences\04-crm.ps1 -WithUi
 # optional: .\scripts\sequences\04-crm.ps1 -RunSmoke
@@ -187,7 +187,7 @@ Local smoke disables entitlements. For real `FEATURE_CRM`:
 ### E) Everything (common → retail → clinic → school → CRM)
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 # Build first (once per tag):
 .\scripts\sequences\build-by-sequence.ps1 -Seq 00,01,02,03,04
 
