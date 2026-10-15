@@ -35,7 +35,7 @@ Official source: `D:\sugamFlow\scripts\sequences\README.md`
 Needed by Retail, Hospital, School (Docker path). CRM optional.
 
 ```powershell
-cd D:\sugamFlow
+cd D:\sugamflow-doc
 
 # For Retail / Hospital / CRM / School — Eureka on host :8761 (canonical)
 .\scripts\sequences\00-common-platform.ps1 -SkipMailHog

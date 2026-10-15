@@ -27,7 +27,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$script = Join-Path (Split-Path $PSScriptRoot -Parent) 'start-sugamflow-app.ps1'
+$SugamFlowRoot = 'D:\sugamFlow'
+$script = Join-Path $SugamFlowRoot 'scripts\start-sugamflow-app.ps1'
 if (-not (Test-Path -LiteralPath $script)) {
     throw "Missing $script"
 }
@@ -36,8 +37,10 @@ Write-Host '========================================' -ForegroundColor Cyan
 Write-Host ' SEQ 01 - SUGAMFLOW RETAIL / SHOP (A3)' -ForegroundColor Cyan
 Write-Host '========================================' -ForegroundColor Cyan
 
-$repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-if (-not (Test-Path (Join-Path $repoRoot 'compose-local.ps1'))) { $repoRoot = 'D:\sugamFlow' }
+$repoRoot = $SugamFlowRoot
+if (-not (Test-Path (Join-Path $repoRoot 'compose-local.ps1'))) {
+    throw "SugamFlow repo not found at $repoRoot (missing compose-local.ps1)"
+}
 . (Join-Path $repoRoot 'scripts\repo-powershell.ps1')
 Ensure-SugamLoginStack -RepoRoot $repoRoot -HealthTimeoutSec ([Math]::Min(120, $HealthTimeoutSec)) -SkipMailHog
 
